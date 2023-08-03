@@ -172,6 +172,19 @@ struct const_list_st
 
 static void parser_allocate(void);
 
+void dStkLodDup(void);
+void dStkLodSqr(void);
+void dStkLodSqr2(void);
+void dStkLodDbl(void);
+void dStkStoDup(void);
+void dStkStoSqr(void);
+void dStkStoSqr2(void);
+void dStkStoDbl(void);
+void dStkReal2(void);
+void dStkSqr0(void);
+void dStkSqr3(void);
+void dStkStoSqr0(void);
+
 union Arg *Arg1, *Arg2;
 /* PB 910417 removed unused "a" array */
 
@@ -464,7 +477,7 @@ void dStkLodSqr(void)
   LodPtr++;
 }
 
-void dStkLodSqr2()
+void dStkLodSqr2(void)
 {
   Arg1++;
   Arg2++;
@@ -481,7 +494,7 @@ void dStkStoDup(){}
 void dStkStoSqr(){}
 void dStkStoSqr0(){}
 
-void dStkLodDbl()
+void dStkLodDbl(void)
 {
   Arg1++;
   Arg2++;

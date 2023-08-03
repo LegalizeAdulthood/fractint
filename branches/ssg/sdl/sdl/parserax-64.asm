@@ -119,13 +119,17 @@ JCSZ               equ 3*LNGSZ+2*(INTSZ+PDDING) ; size of jump_control structure
 ; Then a 'fstp st(0)' if needed.
 %macro POP_STK 1
 ;   NumToPop        = %1 >> 1
-%rep (%1 >> 1)    ;NumToPop
+%assign NumToPop  (%1 >> 1)
+%if (NumToPop >= 1 )
+  %rep (NumToPop)    ;NumToPop
       fcompp
-%endrep
+  %endrep
+%endif
 ;   NumToPop        = %1 - ( NumToPop << 1 )
-%rep (%1 - ( (%1 >> 1) << 1))                 ;NumToPop
+%assign NumToPop  (%1 - ( (%1 >> 1) << 1 ))
+%if (NumToPop = 1)                 ;NumToPop
       fstp         st0
-%endrep
+%endif
 %endmacro
 
 ; Uncomment the following line to enable compiler code generation.
@@ -138,6 +142,7 @@ JCSZ               equ 3*LNGSZ+2*(INTSZ+PDDING) ; size of jump_control structure
 %macro BEGN_OPER 1
 ; %1 = OperName
 %ifndef COMPILER
+;; only align when no compiler
    align           16
 %endif
 
@@ -272,7 +277,7 @@ End_%1:
 
 ;; Make sure the included fn was defined with the BEGN_INCL macro.
    %ifndef          Is_Incl_%2                         ;  CAE 15Feb95
-   %error        Included function was not defined with BEGN_INCL macro
+   %error        fStk%1 included function fStk%2 was not defined with BEGN_INCL macro
    %endif
 
 ;; Gen equate for offset of include in outer fn.
@@ -288,7 +293,7 @@ IAddr_%1 EQU fStk%2
 %else
 
 ;; Generate a call to the included fn.
-      sub     rsp, 8
+      sub     rsp, 8             ; need rsp on 16-byte boundary
       call         fStk%2
       add     rsp, 8
 
@@ -391,8 +396,7 @@ IAddr_%1 EQU fStk%2
 
 %macro ALTER_RET_ADDR 0
 ;;;      mov          WORD PTR [sp],offset past_loop
-      pop          rbx
-      push         qword past_loop
+      mov          qword [rsp], qword past_loop
 %endmacro
 
 ; ---------------------------------------------------------------------------
@@ -449,7 +453,7 @@ IAddr_%1 EQU fStk%2
 ; local storage area
 
 section .bss
-alignb  16
+align  16
 
 fLastOp:    ;    offset of lastop here
       resb  PTRSZ
@@ -496,18 +500,14 @@ section .text
      BEGN_INCL Log                 ; Log
    ; From FPU387.ASM
    ; Log is called by Pwr and is also called directly.
-;      ftst
-;      fstsw        ax
-;      sahf
-      fldz                             ; 0 x y
-      fcomip
+      ftst
+      fstsw        ax
+      sahf
       jnz          short .NotBothZero
       fxch                             ; y x
-;      ftst
-;      fstsw        ax
-;      sahf
-      fldz                             ; 0 y x
-      fcomip
+      ftst
+      fstsw        ax
+      sahf
       fxch                             ; x y
       jnz          short .NotBothZero
       POP_STK 2                        ; clear two numbers
@@ -538,8 +538,8 @@ section .text
    ; NOTE: Full 80-bit accuracy is *NOT* maintained in this function!
    ;       Only 1 additional register can be used here.
    ; Changed fn so that rounding errors are less.                CAE 04DEC93
-      fnstcw       word [Arg2]         ; use arg2 to hold CW
-;      fwait
+      fstcw       word [Arg2]         ; use arg2 to hold CW
+      fwait
       fldln2                           ; ln(2) x
       fdivp        st1,st0             ; x/ln(2), start the fdivr instr.
       mov          ax, word [Arg2]     ; Now do some integer instr.'s
@@ -861,11 +861,9 @@ section .text
       fld          st1                 ; y.x,y.y*y.y,y.x,y.y,x.x,x.y
       fmul         st0,st0             ; y.x*y.x,y.y*y.y,y.x,y.y,x.x,x.y
       fadd                             ; mod,y.x,y.y,x.x,x.y
-;      ftst
-;      fnstsw       ax
-;      sahf
-      fldz
-      fcomip
+      ftst
+      fstsw       ax
+      sahf
       jz           short .DivNotOk
                                        ; can't do this divide until now
       fdiv         st1,st0             ; mod,y.x=y.x/mod,y.y,x.x,x.y
@@ -898,11 +896,9 @@ section .text
       fld          st1                 ; x, y*y, x, y
       fmul         st0,st0             ; x*x, y*y, x, y
       fadd                             ; mod, x, y
-;      ftst
-;      fnstsw       ax
-;      sahf
-      fldz
-      fcomip
+      ftst
+      fstsw       ax
+      sahf
       jz           short .RecipNotOk
       fdiv         st1,st0             ; mod, newx=x/mod, y
       fchs                             ; -mod newx y
@@ -978,13 +974,13 @@ section .text
 ; --------------------------------------------------------------------------
    BEGN_OPER       Clr2                ; Test ST, clear FPU
       ftst
-      xor          rax, rax
-      fnstsw       ax
+      fstsw       ax
                                        ;                      CAE 1 Dec 1998
       ALTER_RET_ADDR                   ; change return address on stack
 
-      fninit                           ; fnstsw will complete first
-      and          ah, 40h             ; return 1 if zf=1
+      fninit                           ; fstsw will complete first
+;      and          ah, 01000000b    ; return 1 if zf=1
+      and          rax, 4000h    ; return 1 if zf=1
       shr          rax,14              ; RAX will be returned by fFormula()
    END_OPER        Clr2
 ; --------------------------------------------------------------------------
@@ -1063,21 +1059,19 @@ section .text
 ;   really don't help much in writing this kind of code.
 ; --------------------------------------------------------------------------
    BEGN_INCL       Push2               ; Push stack down from 8 to 6
-      fdecstp                          ; roll the stack
-      fdecstp                          ; ...
+      fdecstp                            ; roll the stack
+      fdecstp                            ; ...
       fstp         tword [rdi]         ; store x on overflow stack
-      add          rdi, LDBLSZ         ; adjust rdi (LDBLSZ > 10)
-      fstp         tword [rdi]         ; and y (ten bytes each)
-      add          rdi, LDBLSZ         ; adjust rdi
+      fstp         tword [rdi + 10]  ; and y (ten bytes each)
+      add          rdi, 20              ; adjust rdi
    END_INCL        Push2
 ; --------------------------------------------------------------------------
-   BEGN_INCL       Pull2               ; Pull stack up from 2 to 4
-      sub          rdi, LDBLSZ         ; adjust rdi now
-      fld          tword [rdi]         ; oldy x y
-      sub          rdi, LDBLSZ         ; adjust rdi now
-      fxch         st2                 ; y x oldy
+   BEGN_INCL       Pull2        ; Pull stack up from 2 to 4
+      fld          tword [rdi - 10]  ; oldy x y
+      sub          rdi, 20             ; adjust rdi now
+      fxch         st2                  ; y x oldy
       fld          tword [rdi]         ; oldx y x oldy
-      fxch         st2                 ; x y oldx oldy
+      fxch         st2                  ; x y oldx oldy
    END_INCL        Pull2
 ; --------------------------------------------------------------------------
    BEGN_INCL       Push4               ; Push stack down from 8 to 4
@@ -1085,14 +1079,11 @@ section .text
       fdecstp
       fdecstp
       fdecstp
-      fstp         tword [rdi]         ; save the bottom four numbers
-      add          rdi, LDBLSZ
-      fstp         tword [rdi]         ; save full precision on overflow
-      add          rdi, LDBLSZ
+      fstp         tword [rdi + 20]         ; save the bottom four numbers
+      fstp         tword [rdi + 30]         ; save full precision on overflow
       fstp         tword [rdi]
-      add          rdi, LDBLSZ
-      fstp         tword [rdi]
-      add          rdi, LDBLSZ         ; adjust rdi
+      fstp         tword [rdi + 10]
+      add          rdi, 40         ; adjust rdi
    END_INCL        Push4
 ; --------------------------------------------------------------------------
    BEGN_INCL       Push2a              ; Push stack down from 6 to 4
@@ -1101,9 +1092,8 @@ section .text
       fdecstp
       fdecstp
       fstp         tword [rdi]         ; save only two numbers
-      add          rdi, LDBLSZ
-      fstp         tword [rdi]
-      add          rdi, LDBLSZ
+      fstp         tword [rdi + 10]
+      add          rdi, 20
       fincstp                          ; roll back 2 times
       fincstp
    END_INCL        Push2a
@@ -1379,20 +1369,20 @@ section .text
       fsubr                            ; 1-x -y 1+x y
       INCL_OPER    ATanh, Div          ; d.x d.y
    ; From FPU387.ASM
-;      ftst
-;      fstsw        ax
+      ftst
+      fstsw        ax
 ;      sahf
-      fldz
-      fcomip
-      jnz          short .ATanh_NotBothZero
+;      jnz          short .ATanh_NotBothZero
+      and          rax, 4000h   ; 0 if 0 flag not set
+      jz           short .ATanh_NotBothZero
       fxch                             ; y x
-;      ftst
-;      fstsw        ax
+      ftst
+      fstsw        ax
 ;      sahf
-      fldz
-      fcomip
+      and          rax, 4000h   ; 0 if 0 flag not set
       fxch                             ; x y
-      jnz          short .ATanh_NotBothZero
+;      jnz          short .ATanh_NotBothZero
+      jz           short .ATanh_NotBothZero
       POP_STK      2                   ; clear two numbers
       fldz
       fldz
@@ -1428,20 +1418,20 @@ section .text
       fsubr                            ; 1-y x 1+y -x
       INCL_OPER    ATan, Div           ; d.x d.y
    ; CAE put log fn inline 15Feb95
-;      ftst
-;      fstsw        ax
+      ftst
+      fstsw        ax
 ;      sahf
-      fldz
-      fcomip
-      jnz          short .ATan_NotBothZero
+;      jnz          short .ATan_NotBothZero
+      and          rax, 4000h   ; 0 if 0 flag not set
+      jz           short .ATan_NotBothZero
       fxch                             ; y x
-;      ftst
-;      fstsw        ax
+      ftst
+      fstsw        ax
 ;      sahf
-      fldz
-      fcomip
+      and          rax, 4000h   ; 0 if 0 flag not set
       fxch                             ; x y
-      jnz          short .ATan_NotBothZero
+;      jnz          short .ATan_NotBothZero
+      jz          short .ATan_NotBothZero
       POP_STK      2                   ; clear two numbers
       fldz
       fldz
@@ -1481,7 +1471,7 @@ section .text
 ; End of new functions.                                          CAE 15Feb95
 ; --------------------------------------------------------------------------
    BEGN_OPER       Floor               ; Complex floor
-      fnstcw       word [Arg2]         ; use arg2 to hold CW
+      fstcw        word [Arg2]         ; use arg2 to hold CW
       fwait
       mov          ax,word [Arg2]      ; Now do some integer instr.'s
       push         rax                 ; Save control word on stack
@@ -1501,7 +1491,7 @@ section .text
    END_OPER        Floor
 ; --------------------------------------------------------------------------
    BEGN_OPER       Ceil                ; Complex ceiling
-      fnstcw       word [Arg2]         ; use arg2 to hold CW
+      fstcw        word [Arg2]         ; use arg2 to hold CW
       fwait
       mov          ax,word [Arg2]      ; Now do some integer instr.'s
       push         rax                 ; Save control word on stack
@@ -1521,7 +1511,7 @@ section .text
    END_OPER        Ceil
 ; --------------------------------------------------------------------------
    BEGN_OPER       Trunc               ; Complex truncation
-      fnstcw       word [Arg2]         ; use arg2 to hold CW
+      fstcw        word [Arg2]         ; use arg2 to hold CW
       fwait
       mov          ax,word [Arg2]      ; Now do some integer instr.'s
       push         rax                 ; Save control word on stack
@@ -1540,7 +1530,7 @@ section .text
    END_OPER        Trunc
 ; --------------------------------------------------------------------------
    BEGN_OPER       Round               ; Complex round to nearest
-      fnstcw       word [Arg2]         ; use arg2 to hold CW
+      fstcw        word [Arg2]         ; use arg2 to hold CW
       fwait
       mov          ax,word [Arg2]      ; Now do some integer instr.'s
       push         rax                 ; Save control word on stack
@@ -1566,10 +1556,9 @@ section .text
    BEGN_INCL       Jump                ;
 ;      mov          rax,JCSZ           ; rax = sizeof(jump control struct)
 ;      imul         dword [jump_index] ; address of jump_control[jump_index]
-      imul         eax, dword [jump_index], JCSZ
+      imul         eax, [jump_index], JCSZ   ; upper 32 bits of rax set to zero
       lea          rbx, [jump_control]
-      movsxd       rax, eax
-      add          rbx,rax
+      add          rbx, rax
       mov          eax, dword [rbx+INTSZ+PDDING+3*LNGSZ] ; jump_index = DestJumpIndex
       mov          rbx, qword [rbx+INTSZ+PDDING]         ; rbx = JumpOpPtr
       mov          dword [jump_index],eax
@@ -1578,9 +1567,10 @@ section .text
 ; --------------------------------------------------------------------------
    BEGN_OPER       JumpOnTrue          ;
       ftst                             ; test Arg1.x
-      fnstsw       ax
-      sahf
-      jz           short .NotTrue      ; if(Arg1.x != 0)
+      fstsw       ax
+;;      sahf
+      and          rax, 4000h                ; zero flag is inverted, result is 0 if(Arg1.x != 0)
+      jnz           short .NotTrue      ; if(Arg1.x == 0)
       INCL_OPER    JumpOnTrue, Jump    ; call Jump
       jmp          short .EndJumpOnTrue
 .NotTrue:
@@ -1590,9 +1580,10 @@ section .text
 ; --------------------------------------------------------------------------
    BEGN_OPER       JumpOnFalse         ;
       ftst                             ; test Arg1.x
-      fnstsw       ax
-      sahf
-      jnz          short .True         ; if(Arg1.x == 0)
+      fstsw       ax
+;;      sahf
+      and          rax, 4000h                ; zero flag is inverted, result is 0 if(Arg1.x != 0)
+      jz          short .True         ; if(Arg1.x != 0)
       INCL_OPER    JumpOnFalse, Jump
       jmp          short .EndJumpOnFalse
 .True:
@@ -1620,28 +1611,30 @@ section .text
       fldz                             ; 0 0
    END_OPER        LT
 ; --------------------------------------------------------------------------
-   BEGN_INCL       LT2                 ; LT, set AX, clear FPU
+   BEGN_OPER       LT2                 ; LT, set AX, clear FPU
    ; returns !(Arg2->d.x < Arg1->d.x) in ax
       xor          rax, rax
-      fcom         st2                 ; compare arg1, arg2
-      fnstsw       ax
+      fcomi         st2                 ; compare arg1, arg2
+;      fstsw       ax
                                        ;                      CAE 1 Dec 1998
       ALTER_RET_ADDR                   ; change return address on stack
 
       fninit
-      sahf
+;      sahf
       setbe        al                  ; return (Arg1 <= Arg2) in RAX
-      xor          ah,ah
-   END_INCL        LT2
+;      xor          ah,ah
+   END_OPER        LT2
 ; --------------------------------------------------------------------------
    BEGN_OPER       LodLT               ; load, LT
    ; return (1,0) on stack if arg2 < arg1
       FIXUP        LodLT, fcomp, X     ; compare arg2 to arg1, pop st
-      fstsw        ax                  ; y ...
+      fnstsw        ax                  ; y ...
       POP_STK      1                   ; ...
-      sahf
+;      sahf
+      and         rax, 100h       ; check if carry flag set
       fldz                             ; 0 ...
-      jae          short .LodLTfalse   ; jump when arg2 >= arg1
+;      jae          short .LodLTfalse   ; jump when arg2 >= arg1
+      jz          short .LodLTfalse   ; jump when arg2 >= arg1
       fld1                             ; 1 0 ...
       EXIT_OPER    LodLT
 .LodLTfalse:
@@ -1650,26 +1643,34 @@ section .text
 ; --------------------------------------------------------------------------
    BEGN_OPER       LodLT2              ; Lod, LT, set AX, clear FPU
    ; returns !(Arg2->d.x < Arg1->d.x) in ax
-      xor          rax, rax
+;      xor          rax, rax
       FIXUP        LodLT2, fcom, X     ; compare arg2, arg1
-      fstsw        ax
+      fnstsw        ax
                                        ;                      CAE 1 Dec 1998
       ALTER_RET_ADDR                   ; change return address on stack
 
       fninit                           ; clear fpu
-      sahf
-      setae        al                  ; set al when arg2 >= arg1
-      xor          ah,ah               ; clear ah
+;      sahf
+;      setae        al                  ; set al when arg2 >= arg1
+;      xor          ah,ah               ; clear ah
+      and         rax, 100h       ; check if carry flag set
+      jnz           .LodLT2false
+      mov         rax, 1
+      EXIT_OPER    LodLT2
+.LodLT2false:
+      xor           rax, rax
    END_OPER        LodLT2              ; ret 0 in ax for true, 1 for false
 ; --------------------------------------------------------------------------
    BEGN_OPER       LodLTMul            ; Lod, LT, Multiply (needs 4 on stack)
    ; for '<expr> * ( <expr> < <var> )'
    ; return number on stack if arg2 < arg1
       FIXUP        LodLTMul, fcomp, X  ; comp Arg2 to Arg1, pop st
-      fstsw        ax                  ; save status
+      fnstsw        ax                  ; save status
       POP_STK      1                   ; clear 1 from stack
-      sahf
-      jae          short .LodLTMulfalse ; jump if arg2 >= arg1
+;      sahf
+      and         rax, 100h       ; check if carry flag set
+;      jae          short .LodLTMulfalse ; jump if arg2 >= arg1
+      jz            short .LodLTMulfalse ; jump if arg2 >= arg1
       EXIT_OPER    LodLTMul            ; return value on st
    PARSALIGN
 .LodLTMulfalse:
@@ -1678,9 +1679,9 @@ section .text
       fldz
    END_OPER        LodLTMul
 ; --------------------------------------------------------------------------
-   BEGN_INCL       GT                  ; >
+   BEGN_OPER       GT                  ; >
    ; Arg2->d.x = (double)(Arg2->d.x > Arg1->d.x);
-      fcomip       st2                 ; compare arg1, arg2
+      fcomip      st2                 ; compare arg1, arg2
 ;      fstsw        ax
       POP_STK      3
 ;      sahf
@@ -1690,30 +1691,32 @@ section .text
       EXIT_OPER    GT
 .GTfalse:
       fldz                             ; 0 0
-   END_INCL        GT
+   END_OPER        GT
 ; --------------------------------------------------------------------------
-   BEGN_INCL       GT2                 ; GT, set AX, clear FPU
+   BEGN_OPER       GT2                 ; GT, set AX, clear FPU
    ; returns !(Arg2->d.x > Arg1->d.x) in ax
       xor          rax, rax
-      fcom         st2                 ; compare arg1, arg2
-      fnstsw       ax
+      fcomi         st2                 ; compare arg1, arg2
+;      fstsw       ax
                                        ;                      CAE 1 Dec 1998
       ALTER_RET_ADDR                   ; change return address on stack
 
       fninit
-      sahf
+;      sahf
       setae        al                  ; return (Arg1 >= Arg2) in RAX
-      xor          ah,ah
-   END_INCL        GT2
+;      xor          ah,ah
+   END_OPER        GT2
 ; --------------------------------------------------------------------------
    BEGN_OPER       LodGT               ; load, GT
    ; return (1,0) on stack if arg2 > arg1
       FIXUP        LodGT, fcomp, X     ; compare arg2 to arg1, pop st
-      fstsw        ax                  ; y ...
+      fnstsw        ax                  ; y ...
       POP_STK      1                   ; ...
-      sahf
+;      sahf
+      and         ax, 4100h       ; check if carry flag or zero flag set
       fldz                             ; 0 ...
-      jbe          short .LodGTfalse   ; jump when arg2 <= arg1
+;      jbe          short .LodGTfalse   ; jump when arg2 <= arg1
+      jnz          short .LodGTfalse   ; jump when arg2 <= arg1
       fld1                             ; 1 0 ...
       EXIT_OPER    LodGT
 .LodGTfalse:
@@ -1722,21 +1725,27 @@ section .text
 ; --------------------------------------------------------------------------
    BEGN_OPER       LodGT2              ; Lod, GT, set AX, clear FPU
    ; returns !(Arg2->d.x > Arg1->d.x) in AX
-      xor          rax, rax
+;      xor          rax, rax
       FIXUP        LodGT2, fcom, X     ; compare arg2, arg1
-      fstsw        ax
+      fnstsw        ax
                                        ;                      CAE 1 Dec 1998
       ALTER_RET_ADDR                   ; change return address on stack
 
       fninit                           ; clear fpu
-      sahf
-      setbe        al                  ; set al when arg2 <= arg1
-      xor          ah,ah               ; clear ah
+;      sahf
+;     setbe        al                  ; set al when arg2 <= arg1
+;     xor          ah,ah               ; clear ah
+      and         rax, 4100h       ; check if carry or zero flag set
+      jz            .LodGT2false
+      mov         rax, 1
+      EXIT_OPER    LodGT2
+.LodGT2false:
+      xor           rax, rax
    END_OPER        LodGT2              ; ret 0 in ax for true, 1 for false
 ; --------------------------------------------------------------------------
-   BEGN_INCL       LTE                 ; <=
+   BEGN_OPER       LTE                 ; <=
    ; Arg2->d.x = (double)(Arg2->d.x <= Arg1->d.x);
-      fcomip       st2                 ; y x y, comp Arg1 to Arg2
+      fcomip      st2                 ; y x y, comp Arg1 to Arg2
 ;      fstsw        ax                  ; save status now
       POP_STK      3
       fldz                             ; 0 (Arg2->d.y = 0.0;)
@@ -1746,29 +1755,32 @@ section .text
       EXIT_OPER    LTE
 .LTEfalse:
       fldz                             ; 0 0
-   END_INCL        LTE
+   END_OPER        LTE
 ; --------------------------------------------------------------------------
-   BEGN_INCL       LTE2                ; LTE, test ST, clear
+   BEGN_OPER       LTE2                ; LTE, test ST, clear
    ; return !(Arg2->d.x <= Arg1->d.x) in AX
       xor          rax, rax
-      fcom         st2                 ; comp Arg1 to Arg2
-      fnstsw       ax
+      fcomi         st2                 ; comp Arg1 to Arg2
+;      fstsw       ax
                                        ;                      CAE 1 Dec 1998
       ALTER_RET_ADDR                   ; change return address on stack
 
       fninit                           ; clear stack
-      and          rax,100000000b      ; mask cf
-      shr          rax,8               ; rax=1 when arg1 < arg1
-   END_INCL        LTE2                ; return (Arg1 < Arg2),
+;      and         ah,1        ; mask cf
+;      shr          ax,8               ; ax=1 when arg1 < arg1
+      setb        al                 ; rax=1 when arg1 < arg1
+   END_OPER        LTE2                ; return (Arg1 < Arg2),
 ; --------------------------------------------------------------------------
    BEGN_OPER       LodLTE              ; load, LTE
    ; return (1,0) on stack if arg2 <= arg1
       FIXUP        LodLTE, fcomp, X    ; compare arg2 to arg1, pop st
-      fstsw        ax                  ; y ...
+      fnstsw        ax                  ; y ...
       POP_STK      1                   ; ...
-      sahf
+;      sahf
+      and            rax, 4100h       ; check if carry or zero flag set
       fldz                             ; 0 ...
-      ja           short .LodLTEfalse  ; jump when arg2 > arg1
+;      ja           short .LodLTEfalse  ; jump when arg2 > arg1
+      jz           short .LodLTEfalse  ; jump when arg2 > arg1
       fld1                             ; 1 0 ...
       EXIT_OPER    LodLTE
 .LodLTEfalse:
@@ -1777,26 +1789,34 @@ section .text
 ; --------------------------------------------------------------------------
    BEGN_OPER       LodLTE2             ; Load, LTE, test ST, clear
    ; return !(Arg2->d.x <= Arg1->d.x) in AX
-      xor          rax, rax
+;      xor          rax, rax
       FIXUP        LodLTE2, fcom, X    ; comp Arg2 to Arg1
-      fstsw        ax
+      fnstsw        ax
                                        ;                      CAE 1 Dec 1998
       ALTER_RET_ADDR                   ; change return address on stack
 
       fninit
-      sahf
-      seta         al
-      xor          ah,ah               ; ax=1 for expr. false
+;      sahf
+;      seta         al
+;      xor          ah,ah               ; ax=1 for expr. false
+      and          rax, 4100h       ; check if carry and zero flag set
+      jnz             .LodLTE2false
+      mov         rax, 1
+      EXIT_OPER    LodLTE2
+.LodLTE2false:
+      xor           rax, rax
    END_OPER        LodLTE2             ; return (Arg2 > Arg1)
 ; --------------------------------------------------------------------------
    BEGN_OPER       LodLTEMul           ; Lod, LTE, Multiply (needs 4 on stk)
    ; for '<expr> * ( <expr> <= <var> )'
    ; return number on stack if arg2 <= arg1
       FIXUP        LodLTEMul, fcomp, X ; comp Arg2 to Arg1, pop st
-      fstsw        ax                  ; save status
+      fnstsw        ax                  ; save status
       POP_STK      1                   ; clear 1 from stack
-      sahf
-      ja           short .LodLTEMulfalse ; jump if arg2 > arg1
+;      sahf
+      and          rax, 4100h       ; check if carry and zero flag set
+;      ja           short .LodLTEMulfalse ; jump if arg2 > arg1
+      jz           short .LodLTEMulfalse ; jump if arg2 > arg1
       EXIT_OPER    LodLTEMul           ; return value on st
    PARSALIGN
 .LodLTEMulfalse:
@@ -1809,20 +1829,24 @@ section .text
    ; this is for 'expression && (expression <= value)'
    ; stack has {arg2.x arg2.y logical.x junk} on entry (arg1 in memory)
    ; Arg2->d.x = (double)(Arg2->d.x <= Arg1->d.x);
-      xor          rax, rax
+;      xor          rax, rax
       FIXUP        LodLTEAnd2, fcom, X ; comp Arg2 to Arg1
-      fstsw        ax
+      fnstsw        ax
                                        ;                      CAE 1 Dec 1998
       ALTER_RET_ADDR                   ; change return address on stack
 
-      sahf
+;      sahf
+      and          rax, 4100h       ; check if carry and zero flag set
       fxch         st2                 ; logical.x arg2.y arg2.x junk ...
-      ja           .LTEA2RFalse        ; right side is false, Arg2 > Arg1
+;      ja           .LTEA2RFalse        ; right side is false, Arg2 > Arg1
+      jz           .LTEA2RFalse        ; right side is false, Arg2 > Arg1
       ftst                             ; now see if left side of expr is true
-      fstsw        ax
-      sahf
+      fnstsw        ax
+;      sahf
+      and          rax, 4000h       ; check if zero flag set
       fninit                           ; clear fpu
-      jz           .LTEA2LFalse        ; jump if left side of && is false
+;      jz           .LTEA2LFalse        ; jump if left side of && is false
+      jnz          .LTEA2LFalse        ; jump if left side of && is false (zf is inverted)
       xor          rax,rax             ; return zero in rax for expr true
       ret                              ; changed EXIT_OPER->ret  CAE 30DEC93
 .LTEA2RFalse:
@@ -1831,9 +1855,9 @@ section .text
       mov          rax,1               ; return rax=1 for condition false
    END_OPER        LodLTEAnd2
 ; --------------------------------------------------------------------------
-   BEGN_INCL       GTE                 ; >=
+   BEGN_OPER      GTE                 ; >=
    ; Arg2->d.x = (double)(Arg2->d.x >= Arg1->d.x);
-      fcomip       st2                 ; y x y (compare arg1,arg2)
+      fcomip      st2                 ; y x y (compare arg1,arg2)
 ;      fstsw        ax
       POP_STK      3                   ; clear 3 from stk
 ;      sahf
@@ -1843,16 +1867,18 @@ section .text
       EXIT_OPER    GTE
 .GTEfalse:
       fldz                             ; 0 0
-   END_INCL        GTE
+   END_OPER        GTE
 ; --------------------------------------------------------------------------
    BEGN_OPER       LodGTE              ; load, GTE
    ; return (1,0) on stack if arg2 >= arg1
       FIXUP        LodGTE, fcomp, X    ; compare arg2 to arg1, pop st
-      fstsw        ax                  ; y ...
+      fnstsw        ax                  ; y ...
       POP_STK      1                   ; ...
       fldz                             ; 0 ...
-      sahf
-      jb           short .LodGTEfalse  ; jump when arg2 < arg1
+;      sahf
+      and         rax, 100h       ; check if carry flag set
+;      jb           short .LodGTEfalse  ; jump when arg2 < arg1
+      jnz          short .LodGTEfalse  ; jump when arg2 < arg1
       fld1                             ; 1 0 ...
       EXIT_OPER    LodGTE
 .LodGTEfalse:
@@ -1861,20 +1887,20 @@ section .text
 ; --------------------------------------------------------------------------
    BEGN_OPER       LodGTE2             ; Lod, GTE, set AX, clear FPU
    ; return !(Arg2->d.x >= Arg1->d.x) in AX
-      xor          rax, rax
+;      xor          rax, rax
       FIXUP        LodGTE2, fcom, X    ; compare arg2, arg1
-      fstsw        ax
+      fnstsw        ax
                                        ;                      CAE 1 Dec 1998
       ALTER_RET_ADDR                   ; change return address on stack
 
       fninit                           ; clear fpu
-      and          rax,100000000b      ; mask cf
+      and          rax,100h      ; mask cf
       shr          rax,8               ; shift it (RAX = 1 when arg2 < arg1)
    END_OPER        LodGTE2             ; ret 0 in ax for true, 1 for false
 ; --------------------------------------------------------------------------
-   BEGN_INCL       EQ                  ; ==
+   BEGN_OPER       EQ                  ; ==
    ; Arg2->d.x = (double)(Arg2->d.x == Arg1->d.x);
-      fcomip       st2                 ; compare arg1, arg2
+      fcomip      st2                 ; compare arg1, arg2
 ;      fstsw        ax
       POP_STK      3
 ;      sahf
@@ -1884,25 +1910,27 @@ section .text
       EXIT_OPER    EQ
 .EQfalse:
       fldz
-   END_INCL        EQ
+   END_OPER       EQ
 ; --------------------------------------------------------------------------
    BEGN_OPER       LodEQ               ; load, EQ
    ; return (1,0) on stack if arg2 == arg1
       FIXUP        LodEQ, fcomp, X     ; compare arg2 to arg1, pop st
-      fstsw        ax                  ; y ...
+      fnstsw        ax                  ; y ...
       POP_STK      1                   ; ...
       fldz                             ; 0 ...
-      sahf
-      jne          short .LodEQfalse   ; jump when arg2 != arg1
+;      sahf
+      and          rax, 4000h       ; check if zero flag set
+;      jne          short .LodEQfalse   ; jump when arg2 != arg1
+      jz           short .LodEQfalse   ; jump when arg2 != arg1 (zf is inverted)
       fld1                             ; 1 0 ... (return arg2 == arg1)
       EXIT_OPER    LodEQ
 .LodEQfalse:
       fldz                             ; 0 0 ...
    END_OPER        LodEQ
 ; --------------------------------------------------------------------------
-   BEGN_INCL       NE                  ; !=
+   BEGN_OPER       NE                  ; !=
    ; Arg2->d.x = (double)(Arg2->d.x != Arg1->d.x);
-      fcomip       st2                 ; compare arg1,arg2
+      fcomip      st2                 ; compare arg1,arg2
 ;      fstsw        ax
       POP_STK      3
 ;      sahf
@@ -1912,16 +1940,18 @@ section .text
       EXIT_OPER    NE
 .NEfalse:
       fldz
-   END_INCL        NE
+   END_OPER        NE
 ; --------------------------------------------------------------------------
    BEGN_OPER       LodNE               ; load, NE
    ; return (1,0) on stack if arg2 != arg1
       FIXUP        LodNE, fcomp, X     ; compare arg2 to arg1, pop st
-      fstsw        ax                  ; y ...
+      fnstsw        ax                  ; y ...
       POP_STK      1                   ; ...
       fldz                             ; 0 ...
-      sahf
-      je           short .LodNEfalse   ; jump when arg2 == arg1
+;      sahf
+      and          rax, 4000h       ; check if zero flag set
+;      je           short .LodNEfalse   ; jump when arg2 == arg1
+      jnz          short .LodNEfalse   ; jump when arg2 == arg1 (zf is inverted)
    ; CAE changed above 'jne' to 'je'                              9 MAR 1993
       fld1                             ; 1 0 ...
       EXIT_OPER    LodNE
@@ -1929,23 +1959,23 @@ section .text
       fldz                             ; 0 0 ...
    END_OPER        LodNE
 ; --------------------------------------------------------------------------
-   BEGN_INCL       OR                  ; Or
+   BEGN_OPER       OR                  ; Or
    ; Arg2->d.x = (double)(Arg2->d.x || Arg1->d.x);
-;      ftst                             ; a1.x a1.y a2.x a2.y ...
-;      fstsw        ax
+      ftst                             ; a1.x a1.y a2.x a2.y ...
+      fnstsw        ax
 ;      sahf
-      fldz
-      fcomip
+      and        rax, 4000h
       POP_STK      2                   ; a2.x a2.y ...
-      jnz          short .Arg1True
-;      ftst
-;      fstsw        ax
+;      jnz          short .Arg1True
+      jz          short .Arg1True     ; zero flag is inverted
+      ftst
+      fnstsw        ax
 ;      sahf
-      fldz
-      fcomip
+      and        rax, 4000h
       POP_STK      2                   ; ...
       fldz                             ; 0 ...
-      jz           short .NoneTrue
+;      jz           short .NoneTrue
+      jnz          short .NoneTrue     ; zero flag is inverted
       fld1                             ; 1 0 ...
       EXIT_OPER    OR
    PARSALIGN
@@ -1956,25 +1986,25 @@ section .text
       EXIT_OPER    OR
 .NoneTrue:                             ; 0 ...
       fldz                             ; 0 0 ...
-   END_INCL        OR
+   END_OPER        OR
 ; --------------------------------------------------------------------------
-   BEGN_INCL       AND                 ; And
+   BEGN_OPER      AND                 ; And
    ; Arg2->d.x = (double)(Arg2->d.x && Arg1->d.x);
-;      ftst                             ; a1.x a1.y a2.x a2.y ...
-;      fstsw        ax
+      ftst                             ; a1.x a1.y a2.x a2.y ...
+      fnstsw        ax
 ;      sahf
-      fldz
-      fcomip
+      and        rax, 4000h
       POP_STK      2                   ; a2.x a2.y ...
-      jz           short .Arg1False
-;      ftst
-;      fstsw        ax
+;      jz           short .Arg1False
+      jnz           short .Arg1False     ; zero flag is inverted
+      ftst
+      fnstsw        ax
 ;      sahf
-      fldz
-      fcomip
+      and        rax, 4000h
       POP_STK      2                   ; ...
       fldz                             ; 0 ...
-      jz           short .Arg2False
+;      jz           short .Arg2False
+      jnz           short .Arg2False     ; zero flag is inverted
       fld1                             ; 1 0 ...
       EXIT_OPER    AND
    PARSALIGN
@@ -1983,30 +2013,30 @@ section .text
       fldz                             ; 0 ...
 .Arg2False:
       fldz                             ; 0 0 ...
-   END_INCL        AND
+   END_OPER       AND
 ; --------------------------------------------------------------------------
-   BEGN_INCL       ANDClr2             ; And, test ST, clear FPU
+   BEGN_OPER       ANDClr2             ; And, test ST, clear FPU
    ; for bailouts using <condition> && <condition>
    ;  Arg2->d.x = (double)(Arg2->d.x && Arg1->d.x);
    ;  Returns !(Arg1 && Arg2) in ax
-      xor          rax, rax
-;      ftst                             ; y.x y.y x.x x.y
-;      fstsw        ax
+;      xor          rax, rax
+      ftst                             ; y.x y.y x.x x.y
+      fnstsw        ax
                                        ;                      CAE 1 Dec 1998
       ALTER_RET_ADDR                   ; change return address on stack
 
 ;      sahf
-      fldz
-      fcomip
-      jz           short .Arg1False2
+      and        rax, 4000h
+;      jz           short .Arg1False2
+      jnz           short .Arg1False2     ; zero flag is inverted
       fxch         st2                 ; x.x y.y y.x x.y
-;      ftst
-;      fstsw        ax
+      ftst
+      fnstsw        ax
 ;      sahf
-      fldz
-      fcomip
+      and        rax, 4000h
       fninit
-      jz           short .Arg2False2
+;      jz           short .Arg2False2
+      jnz           short .Arg2False2     ; zero flag is inverted
 .BothTrue2:
       xor          rax, rax
       ret                              ; changed EXIT_OPER->ret  CAE 30DEC93
@@ -2014,30 +2044,30 @@ section .text
       fninit
 .Arg2False2:
       mov          rax,1
-   END_INCL        ANDClr2
+   END_OPER        ANDClr2
 ; --------------------------------------------------------------------------
-   BEGN_INCL       ORClr2           ; Or, test ST, clear FPU      CAE 6NOV93
+   BEGN_OPER       ORClr2           ; Or, test ST, clear FPU      CAE 6NOV93
    ; for bailouts using <condition> || <condition>
    ;  Arg2->d.x = (double)(Arg2->d.x || Arg1->d.x);
    ;  Returns !(Arg1 || Arg2) in ax
-      xor          rax, rax
-;      ftst                             ; y.x y.y x.x x.y
-;      fstsw        ax
-      fldz
-      fcomip
+;      xor          rax, rax
+      ftst                             ; y.x y.y x.x x.y
+      fstsw        ax
                                        ;                      CAE 1 Dec 1998
       ALTER_RET_ADDR                   ; change return address on stack
 
 ;      sahf
-      jnz          short .ORArg1True
+      and        rax, 4000h
+;      jnz          short .ORArg1True
+      jz          short .ORArg1True     ; zero flag is inverted
       fxch         st2                 ; x.x y.y y.x x.y
-;      ftst
-;      fstsw        ax
+      ftst
+      fstsw        ax
 ;      sahf
-      fldz
-      fcomip
+      and        rax, 4000h
       fninit
-      jnz          short .ORArg2True
+;      jnz          short .ORArg2True
+      jz          short .ORArg2True     ; zero flag is inverted
 .ORNeitherTrue:
       mov          rax,1
       ret                              ; changed EXIT_OPER->ret  CAE 30DEC93
@@ -2045,7 +2075,7 @@ section .text
       fninit
 .ORArg2True:
       xor          rax, rax
-   END_INCL        ORClr2
+   END_OPER        ORClr2
 
 ; --------------------------------------------------------------------------
 ;   assume          ds:DGROUP, es:nothing
@@ -2064,11 +2094,11 @@ Img_Setup:
 
       xor          rdi, rdi
       mov          rsi, [pfls]          ; rsi = &pfls[0]
-      mov          edi, dword [LastOp]  ; load index of lastop
-      sub          edi, 1               ; flastop now points at last operator
+      mov          edi, [LastOp]  ; load index of lastop, upper 32 bits of rdi set to zero
+      sub          rdi, 1               ; flastop now points at last operator
       ; above added by CAE 09OCT93 because of loop logic changes
 
-      shl          edi, 4               ; convert to offset, 2xPTRSZ = x16
+      shl          rdi, 4               ; convert to offset, 2xPTRSZ = x16
       add          rdi, rsi             ; rdi = offset lastop
       mov          qword [fLastOp], rdi ; save value of flastop
       mov          rax, qword [v]       ; build a ptr to Z
@@ -2080,7 +2110,7 @@ Img_Setup:
 ; --------------------------------------------------------------------------
 ;  Hybrid orbitcalc/per-pixel routine (tested, but not implemented.)
 ;
-;  To implement, stick the following code in calcfrac.c around line 788,
+;  To implement, stick the following code in calcfrac.c around line 2000,
 ;     just before the line that says "while (++coloriter < maxit)".
 ; --------------------------------------------------------------------------
 ;  if (curfractalspecific->orbitcalc == fFormula  /* 387 parser  */
@@ -2095,14 +2125,16 @@ Img_Setup:
    CGLOBAL          fFormulaX          ;                         CAE 09OCT93
    align           16
 fFormulaX:    ;     proc far
-      FRAME    rsi,rdi
+      push         rsi
+      push         rdi
+      UNFRAME      rsi,rdi
       mov          eax, [InitJumpIndex]
       mov          [jump_index],eax
       mov          rdx,[maxit]         ; rdx holds coloriter during loop
       mov          [coloriter],rdx     ; set coloriter to maxit
 ;      mov          eax,eds            ; save ds in ax
 ;      lds          cx,word [_fLastOp]         ; ds:cx -> one past last token
-      mov          rcx, [fLastOp]      ; rcx -> one past last token
+      mov          rcx, qword [fLastOp]      ; rcx -> one past last token
 ;      mov          es,ax              ; es -> DGROUP
 ;   assume          es:DGROUP, ds:nothing ; swap es, ds before any fn. calls
       jmp          short skipfirst     ; skip bailout test first time
@@ -2114,7 +2146,7 @@ skipfirst:
 ;      dec          rdx                ; ++coloriter
       sub          rdx,1
       jle          short doneloop      ; yes, exit because of maxiter
-      mov          rbx,[InitOpPtr]       ; bx -> one before first token
+      mov          rbx, qword [InitOpPtr]       ; bx -> one before first token
       lea          rdi, [s]            ; reset stk overflow ptr
    align           16
 inner_loop2:
@@ -2122,7 +2154,7 @@ inner_loop2:
       jae          short outer_loop    ; yes, bx points to last function
       add          rbx,PTRSZ*2         ; point to next pointer pair
       push         qword inner_loop2   ; do this first
-      mov          rsi, [rbx+PTRSZ]    ; set rsi to operand pointer
+      mov          rsi, qword [rbx+PTRSZ]    ; set rsi to operand pointer
       jmp          QWORD [rbx]         ; jmp to operator fn
    align           16
 doneloop:
@@ -2131,10 +2163,11 @@ doneloop:
       lea          rdi, [new]           ; rdi -> new
       mov          rcx, 2               ; get ready to move 2 qwords
       rep          movsq                ; new = z
-      UNFRAME    rsi,rdi
+      pop         rdi
+      pop         rsi
 ;      mov          ds,ax               ; restore ds before return
 ;   assume          ds:DGROUP, es:nothing
-      sub          [coloriter],rdx      ; now put new coloriter back from rdx
+      sub          qword [coloriter],rdx      ; now put new coloriter back from rdx
       ret
 ;_fFormulaX         endp
 ; --------------------------------------------------------------------------
@@ -2176,7 +2209,8 @@ past_loop:
    CGLOBAL          fform_per_pixel    ; called once per pixel
    align           16
 fform_per_pixel:   ; proc far
-      FRAME        rsi, rdi, rbx
+;;  Add rax to FRAME as a dummy to get RSP adjustment out of pixel_loop
+      FRAME        rsi, rdi, rbx, rax
    ;    if((row+col)&1)
       mov          eax, dword [row]    ; eax = row
       mov          edx, dword [col]    ; edx = col
@@ -2208,9 +2242,11 @@ checker_is_1:
       je           skip_invert          ;                        CAE 08FEB95
 
       lea          rdi, [old]           ; long passed in rdi
+      sub          rsp, 8              ; need rsp on 16-byte boundary after next
       push         rdi                  ; save address for data transfer
       call         qword invertz2       ; invertz2(&old)
       pop          rsi                  ; put &old into rsi
+      add          rsp, 8
       ; now copy old to v[0].a.d
       mov          rdi, qword [v]       ; rsi already points to old
       add          rdi, CPFX            ; make rdi point to v[0].a.d
@@ -2286,9 +2322,7 @@ after_load:
    align           16
 pixel_loop:
       mov          rsi, qword [rbx + PTRSZ]  ; get address of load or store
-      sub          rsp, 8              ; need rsp on 16-byte boundary
       call         qword [rbx]         ; (*opptr)()
-      add          rsp, 8
       add          rbx, PTRSZ*2        ; ++opptr
       cmp          rbx, [LastInitOp]
       jb           short pixel_loop
@@ -2300,7 +2334,7 @@ skip_initloop:
 
 ;   ; subtract removed     CAE 1 Dec 1998
       mov          qword [InitOpPtr], rbx      ; InitOptPtr = OpPtr;
-      UNFRAME      rsi, rdi, rbx
+      UNFRAME      rsi, rdi, rbx, rax
       xor          rax, rax
       ret
 ;_fform_per_pixel   endp
@@ -2360,12 +2394,12 @@ fFormula:        ;  proc far
       push         rdi                 ; don't build a frame here
       lea          rdi, qword [s]      ; reset this for stk overflow area
       push         rsi                 ; compiled_fn modifies rsi
-      sub          rsp, 8
+      sub          rsp, 8             ; need rsp on 16-byte boundary
       call         compiled_fn_2       ; call the compiled code
       add          rsp, 8
    ; NOTE: RAX was set by the compiled code and must be preserved here.
       mov          rsi, qword [PtrToZ] ; rsi -> z
-      mov          rdi, qword [new]    ; rdi -> new
+      lea          rdi, qword [new]    ; rdi -> new
       mov          rcx, 2              ; get ready to move 2 qwords
       rep          movsq               ; new = z
       pop          rsi
@@ -2380,9 +2414,11 @@ fform_per_pixel:    ; proc far
       cmp          invert,0            ; inversion support added
       je           skip_invert         ;                        CAE 08FEB95
       lea          rdi, [old]          ; double passed in rdi 
+      sub          rsp, 8             ; need rsp on 16-byte boundary
       push         rdi                 ; save address for data transfer
       call         qword invertz2      ; invertz2(&old)
       pop          rsi                 ; put &old into rsi
+      add          rsp, 8
       ; now copy old to v[0].a.d
       mov          rdi, qword [v]      ; rsi already points to old
       add          rdi, CPFX           ; make rdi point to v[0].a.d

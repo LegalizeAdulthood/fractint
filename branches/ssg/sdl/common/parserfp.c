@@ -486,7 +486,7 @@ static int CvtFptr(void (* ffptr)(void), int MinStk, int FreeStk,
 #ifdef TESTFP
   int prevstkcnt;
 #endif
-  LDBL dTemp;
+  double dTemp;
 
   int Max_On_Stack = MAX_STACK - FreeStk;  /* max regs allowed on stack  */
   int Num_To_Push; /* number of regs to push  */
@@ -553,12 +553,12 @@ awful_error:
   /* set the operand pointer here for store function  */
   if (ffptr == fStkSto )
     {
-      OPPTR(cvtptrx) = (void *)(char *)((Store[StoPtr++]));
+      OPPTR(cvtptrx) = (void *)(void *)((Store[StoPtr++]));
     }
   else if (ffptr == fStkLod && debugflag == 322 )
     {
       /* when disabling optimizer, set load pointer here  */
-      OPPTR(cvtptrx) = (void *)(char *)((Load[LodPtr++]));
+      OPPTR(cvtptrx) = (void *)(void *)((Load[LodPtr++]));
     }
   else   /* the optimizer will set the pointer for load fn.  */
     {
@@ -647,7 +647,7 @@ awful_error:
             }
         }
       /* set the operand ptr here  */
-      OPPTR(cvtptrx) = (void *)(char *)((Load[LodPtr++]));
+      OPPTR(cvtptrx) = (void *)(void *)((Load[LodPtr++]));
     }
   /* ******************************************************************** */
   else if (ffptr == fStkAdd )
@@ -1027,7 +1027,7 @@ awful_error:
           v[vsp].a.d.y = 0.0;
           {
             void *p = &v[vsp++].a;
-            OPPTR(cvtptrx) = (void *)(char *)(p);  /* isn't C fun!  */
+            OPPTR(cvtptrx) = (void *)(void *)(p);  /* isn't C fun!  */
           }
           ffptr = fStkLodRealMul;
         }
@@ -1263,6 +1263,7 @@ awful_error:
           ffptr = fStkLodLTE;
         }
     }
+#if 1
   /* ******************************************************************** */
   else if (ffptr == fStkLT )
     {
@@ -1275,6 +1276,7 @@ awful_error:
           ffptr = fStkLodLT;
         }
     }
+#endif
   /* ******************************************************************** */
   else if (ffptr == fStkGT )
     {
@@ -1565,11 +1567,13 @@ int CvtStk()    /* convert the array of ptrs  */
       DBUGMSG(0, "LT Clr2 -> LT2" );
       FNPTR(cvtptrx-1) = fStkLT2;
     }
+#if 1
   else if (ntst == fStkLodLT )
     {
       DBUGMSG(0, "LodLT Clr2 -> LodLT2" );
       FNPTR(cvtptrx-1) = fStkLodLT2;
     }
+#endif
   else if (ntst == fStkLTE )
     {
       DBUGMSG(0, "LTE Clr2 -> LTE2" );

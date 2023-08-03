@@ -397,8 +397,7 @@ IAddr_%1 EQU fStk%2
 
 %macro ALTER_RET_ADDR 0
 ;;;      mov          WORD PTR [sp],offset past_loop
-      pop          ebx
-      push         dword past_loop
+      mov          dword [esp], dword past_loop
 %endmacro
 ; ---------------------------------------------------------------------------
 ; external functions
@@ -454,7 +453,7 @@ section .data
 ; local storage area
 
 section .bss
-alignb  16
+align  16
 
 fLastOp:    ;    offset of lastop here
       resb  PTRSZ
@@ -974,7 +973,6 @@ oldwayR:
 ; --------------------------------------------------------------------------
    BEGN_OPER       Clr2                ; Test ST, clear FPU
       ftst
-      xor          eax, eax
       fstsw        ax
                                        ;                      CAE 1 Dec 1998
       ALTER_RET_ADDR                   ; change return address on stack
@@ -1061,14 +1059,14 @@ oldwayR:
    BEGN_INCL       Push2               ; Push stack down from 8 to 6
       fdecstp                          ; roll the stack
       fdecstp                          ; ...
-      fstp         tword [edi]   ; store x on overflow stack
-      fstp         tword [edi+LDBLSZ] ; and y (LDBLSZ > ten bytes each)
-      add          edi,2 * LDBLSZ      ; adjust edi
+      fstp         tword [edi]      ; store x on overflow stack
+      fstp         tword [edi+10] ; and y (ten bytes each)
+      add          edi,20            ; adjust edi
    END_INCL        Push2
 ; --------------------------------------------------------------------------
    BEGN_INCL       Pull2               ; Pull stack up from 2 to 4
-      fld          tword [edi-LDBLSZ] ; oldy x y
-      sub          edi,2 * LDBLSZ     ; adjust di now
+      fld          tword [edi-10] ; oldy x y
+      sub          edi,20     ; adjust di now
       fxch         st2               ; y x oldy
       fld          tword [edi]   ; oldx y x oldy
       fxch         st2               ; x y oldx oldy
@@ -1079,11 +1077,11 @@ oldwayR:
       fdecstp
       fdecstp
       fdecstp
-      fstp         tword [edi+2*LDBLSZ] ; save the bottom four numbers
-      fstp         tword [edi+3*LDBLSZ] ; save full precision on overflow
+      fstp         tword [edi+20] ; save the bottom four numbers
+      fstp         tword [edi+30] ; save full precision on overflow
       fstp         tword [edi]
-      fstp         tword [edi+LDBLSZ]
-      add          edi,4 * LDBLSZ       ; adjust edi
+      fstp         tword [edi+10]
+      add          edi,40            ; adjust edi
    END_INCL        Push4
 ; --------------------------------------------------------------------------
    BEGN_INCL       Push2a              ; Push stack down from 6 to 4
@@ -1092,8 +1090,8 @@ oldwayR:
       fdecstp
       fdecstp
       fstp         tword [edi]   ; save only two numbers
-      fstp         tword [edi+LDBLSZ]
-      add          edi, 2 * LDBLSZ
+      fstp         tword [edi+10]
+      add          edi, 20
       fincstp                          ; roll back 2 times
       fincstp
    END_INCL        Push2a
@@ -1595,7 +1593,7 @@ EndJumpOnFalse:
 ; --------------------------------------------------------------------------
 ; End of new functions.                                          TIW 09Mar97
 ; --------------------------------------------------------------------------
-   BEGN_OPER       LT                  ; <
+   BEGN_INCL       LT                  ; <
    ; Arg2->d.x = (double)(Arg2->d.x < Arg1->d.x);
       fcomp        st2               ; y.y, x.x, x.y, comp arg1 to arg2
       fstsw        ax
@@ -1607,7 +1605,7 @@ EndJumpOnFalse:
       EXIT_OPER    LT
 LTfalse:
       fldz                             ; 0 0
-   END_OPER        LT
+   END_INCL        LT
 ; --------------------------------------------------------------------------
    BEGN_INCL       LT2                 ; LT, set AX, clear FPU
    ; returns !(Arg2->d.x < Arg1->d.x) in ax
