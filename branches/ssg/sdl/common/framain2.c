@@ -1479,7 +1479,8 @@ int evolver_menu_switch(int *kbdchar, int *frommandel, int *kbdmore, char *stack
       rotate((*kbdchar == 'c') ? 0 : ((*kbdchar == '+') ? 1 : -1));
       if (memcmp(olddacbox, dacbox, DACSIZE * 3))
         {
-          colorstate = 1;
+          /*         colorstate = 1;  Move to rotate.c to more precisely define when */
+          /*                          colorstate is changed. JCO 11/18/2007 */
           save_history_info();
         }
       return(CONTINUE);
@@ -1506,7 +1507,8 @@ int evolver_menu_switch(int *kbdchar, int *frommandel, int *kbdmore, char *stack
           helpmode = oldhelpmode;
           if (memcmp(olddacbox, dacbox, DACSIZE * 3))
             {
-              colorstate = 1;
+              /*           colorstate = 1;  Move to editpal.c to more precisely define when */
+              /*                            colorstate is changed. JCO 11/18/2007 */
               save_history_info();
             }
         }

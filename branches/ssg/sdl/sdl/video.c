@@ -166,7 +166,9 @@ void setnullvideo (void)
 */
 void setvideotext (void)
 {
-  setvideomode (3);  /* dotmode = 3 for text, but don't change screen */
+  initmode = adapter;
+  dotmode = 3;
+  setvideomode (dotmode);  /* dotmode = 3 for text, but don't change screen */
 }
 
 void loaddac (void)
@@ -189,10 +191,10 @@ int setvideomode (int dotmode)
     {
       enddisk ();
     }
+
   switch (dotmode)
     {
     case 3:   /* text */
-      ResizeScreen(2);
       starttext();
       setfortext();
       break;
@@ -206,7 +208,7 @@ int setvideomode (int dotmode)
       dotread = readvideo;
       lineread = readvideoline;
       linewrite = writevideoline;
-      ResizeScreen(1);
+      ResizeScreen();
       setforgraphics ();
       break;
     case 11:
@@ -266,27 +268,16 @@ void putcolor_a (int xdot, int ydot, int color)
 */
 void movecursor (int row, int col)
 {
-  if (row == -1)
-    {
-      row = textrow;
-    }
-  else
-    {
-      textrow = row;
-    }
-  if (col == -1)
-    {
-      col = textcol;
-    }
-  else
-    {
-      textcol = col;
-    }
-  if (textrow == 25 && textcol == 80)
+  if (row >= TEXT_HEIGHT || col >= TEXT_WIDTH)
   {
-      text_attr[textrow][textcol] = 0;
-      text_screen[textrow][textcol] = '\0';
+    row = TEXT_HEIGHT - 1;
+    col = TEXT_WIDTH - 1;
   }
+
+  if (row >= 0)
+    textrow = row;
+  if (col >= 0)
+    textcol = col;
 }
 
 /*
@@ -357,14 +348,12 @@ void spindac (int dir, int inc)
 ; ---- Help (Video) Support
 ; ********* Functions setfortext() and setforgraphics() ************
 
-;       setfortext() resets the video for text mode and saves graphics data
+;       setfortext() sets up text mode
 ;       setforgraphics() restores the graphics mode and data
-;       setclear() clears the screen after setfortext()
 */
 void setfortext (void)
 {
   stackscreen();
-  setclear();
 }
 
 void setforgraphics (void)
@@ -382,7 +371,7 @@ void dac_to_rgb(BYTE color, BYTE *red, BYTE *green, BYTE *blue)
     {
     default:
     case 0:
-#if 1 //BYTE_ORDER == BIG_ENDIAN
+#if 1 /* BYTE_ORDER == BIG_ENDIAN */
       *red   = dacbox[color][2] << 2; /* red */
       *green = dacbox[color][1] << 2; /* green */
       *blue  = dacbox[color][0] << 2; /* blue */
@@ -710,7 +699,7 @@ char get_a_char (void)
 
 void put_a_char (char ch)
 {
-// NOTE (jonathan#1#): Used in slideshw.c!!!
+/* Used in slideshw.c!!! */
   int attr = text_attr[textrow][textcol];
 
   putstring (-1, -1, attr, &ch);
@@ -720,6 +709,9 @@ void blink_cursor (void)
 {
   int attr;
 
+  if (textrow == TEXT_HEIGHT-1 && textcol == TEXT_WIDTH-1)
+    return; /* nothing to blink */
+
   attr = text_attr[textrow][textcol];
   if (attr & BLINK)
     attr -= BLINK;
@@ -727,17 +719,24 @@ void blink_cursor (void)
     attr += BLINK;
   text_attr[textrow][textcol] = attr;
   outtext(textrow, textcol, textcol+1);
+
+  return;
 }
 
 void unblink_cursor (void)
 {
   int attr;
 
+  if (textrow == TEXT_HEIGHT-1 && textcol == TEXT_WIDTH-1)
+    return; /* nothing to unblink */
+
   attr = text_attr[textrow][textcol];
   if (attr & BLINK)
     attr -= BLINK;
   text_attr[textrow][textcol] = attr;
   outtext(textrow, textcol, textcol+1);
+
+  return;
 }
 
 /*

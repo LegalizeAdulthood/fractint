@@ -2583,13 +2583,13 @@ int get_3d_params()     /* prompt for 3D parameters */
   int sphere;
   char *s;
   static FCODE s1[] = {"Sphere 3D Parameters\n\
-                       Sphere is on its side; North pole to right\n\
-                       Long. 180 is top, 0 is bottom; Lat. -90 is left, 90 is right"
-                      };
+Sphere is on its side; North pole to right\n\
+Long. 180 is top, 0 is bottom; Lat. -90 is left, 90 is right"
+};
   static FCODE s2[]={"Planar 3D Parameters\n\
-                     Pre-rotation X axis is screen top; Y axis is left side\n\
-                     Pre-rotation Z axis is coming at you out of the screen!"
-                    };
+Pre-rotation X axis is screen top; Y axis is left side\n\
+Pre-rotation Z axis is coming at you out of the screen!"
+};
   char *prompts3d[21];
   struct fullscreenvalues uvalues[21];
   int i, k;
@@ -2848,7 +2848,9 @@ restart_3:
     s = s2;
 
   helpmode = HELP3DPARMS;
+  stackscreen();
   k = fullscreen_prompt(s,k,prompts3d,uvalues,0,NULL);
+  unstackscreen();
   helpmode = oldhelpmode;
   if (k < 0)
     goto restart_1;

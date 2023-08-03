@@ -1170,7 +1170,7 @@ void ftimex(struct timebx *tp)
 }
 
 #ifdef XFRACT
-unsigned short _rotl(unsigned short num, short bits)
+unsigned short rotl(unsigned short num, short bits)
 {
   unsigned long ll;
   ll = (((unsigned long)num << 16) + num) << (bits&15);

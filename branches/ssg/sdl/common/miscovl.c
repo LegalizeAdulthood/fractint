@@ -1763,8 +1763,6 @@ int select_video_mode(int curmode)
       && badconfig == 0)
     update_fractint_cfg();
 
-  discardscreen();
-
   return(ret);
 }
 

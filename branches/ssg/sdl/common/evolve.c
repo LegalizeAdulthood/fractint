@@ -39,7 +39,6 @@ char s_random[] = "random";
 char s_spread[] = "spread";
 char s_xplusy[] = "x+y";
 char s_xminusy[] = "x-y";
-char buf[3200];
 
 struct phistory_info      /* for saving evolution data of center image */
   {
@@ -387,6 +386,7 @@ static int get_the_rest(void)
   static FCODE o_hdg[]={"Variable tweak central 2 of 2"};
   int i,k,num, numtrig;
   char hdg[sizeof(o_hdg)];
+  char buf[3200];
   char *choices[20];
   char *ptr;
   struct fullscreenvalues uvalues[20];
@@ -490,6 +490,7 @@ int get_variations(void)
   static FCODE o_hdg[]={"Variable tweak central 1 of 2"};
   int i,k,num, numparams;
   char hdg[sizeof(o_hdg)];
+  char buf[3200];
   char *choices[20];
   char *ptr;
   struct fullscreenvalues uvalues[20];
@@ -637,6 +638,7 @@ int get_evolve_Parms(void)
 {
   static FCODE o_hdg[]={"Evolution Mode Options"};
   char hdg[sizeof(o_hdg)];
+  char buf[3200];
   char *choices[20];
   char *ptr;
   int oldhelpmode;

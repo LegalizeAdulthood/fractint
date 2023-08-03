@@ -413,10 +413,7 @@ telephones.
 All we can say is that non-productivity software has never been so potent,
 and we're sorry, it's our fault!
 
-Fractint was compiled using Microsoft C 7.0 and Microsoft Assembler 6.0,
-using the "Medium" model. Note that the assembler code uses the "C" model
-option added to version 5.1, and must be assembled with the /MX or /ML
-switch to link with the "C" code. Because it has become too large to
+Fractint was compiled using GCC and NASM.  Because it has become too large to
 distribute comfortably as a single compressed file, and because many
 downloaders have no intention of ever modifying it, Fractint is now
 distributed as two files: one containing FRACTINT.EXE, auxiliary files and
@@ -1018,12 +1015,12 @@ just let us know and we'll add it back.)
 ~FF
 Current main authors:
 ~Format-
-Timothy Wegner          twegner@fractint.org
+Timothy Wegner          twegner at fractint.net
 4714 Rockwood
 Houston, TX 77004
 (713) 747-7543
 
-Jonathan Osuch          josuch@fractint.org
+Jonathan Osuch          osuchj at fractint.net
 2110 Northview Drive
 Marion, IA  52302
 
@@ -3400,8 +3397,8 @@ Version 1.0, 9/88
 ; FRACTINT intro screen primary authors
 ;
  Primary Authors (current version)
- Timothy Wegner       twegner AT fractint.org
- Jonathan Osuch       josuch AT fractint.org
+ Timothy Wegner       twegner AT fractint.net
+ Jonathan Osuch       osuchj AT fractint.net
  Contributing Authors
  ; room for 16 authors at a time here
 
@@ -3420,7 +3417,7 @@ Version 1.0, 9/88
 
 
  SPACEBAR toggles scrolling off/on
-  Copyright (C) 1990-2022 The Stone Soup Group.  Fractint may be freely copied
+  Copyright (C) 1990-2023 The Stone Soup Group.  Fractint may be freely copied
   and distributed but may not be sold.  See help for more information.
 ;
 ;

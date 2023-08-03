@@ -16,13 +16,15 @@
 /* SDL global variables */
 SDL_Surface *mainscrn = NULL;
 SDL_Surface *backscrn = NULL;
-SDL_Surface *backtext = NULL;
+SDL_Surface *textscrn = NULL;
 SDL_Window *sdlWindow = NULL;
 SDL_Renderer *sdlRenderer = NULL;
 SDL_Texture *sdlTexture = NULL;
+SDL_Texture *sdlTextTexture = NULL;
 
 Uint32 sdlPixelfmt;
 int rowbytes;
+int textrowbytes;
 SDL_PixelFormat *sdlPixelFormat;
 static int display_in_use = 0;
 int x_close = 0;
@@ -31,7 +33,7 @@ int file_IO = 0; /* kludge to indicate saving/restoring an image */
 TTF_Font *font = NULL;
 SDL_Color cols[DACSIZE];
 int SDL_init_flags = SDL_INIT_VIDEO|SDL_INIT_TIMER;
-int SDL_video_flags = SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI;
+int SDL_video_flags = /*SDL_WINDOW_RESIZABLE |*/ SDL_WINDOW_ALLOW_HIGHDPI;
 int SDL_renderer_flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_TARGETTEXTURE;
 SDL_Cursor *mousecurser = NULL;
 
@@ -95,22 +97,18 @@ static int mousefkey[4][4] /* [button][dir] */ =
 int resize_flag = 0;
 int window_is_fullscreen = 0;
 int updatewindow = 1;
-int screenctr = 0;
+static int screenctr = -1;
 int txt_ht;  /* text letter height = 2^txt_ht pixels */
 int txt_wt;  /* text letter width = 2^txt_wt pixels */
 
 char text_screen[TEXT_HEIGHT][TEXT_WIDTH];
 int  text_attr[TEXT_HEIGHT][TEXT_WIDTH];
-char stack_text_screen[TEXT_HEIGHT][TEXT_WIDTH];
-int  stack_text_attr[TEXT_HEIGHT][TEXT_WIDTH];
 static double mouse_scale_x = 1.0;
 static double mouse_scale_y = 1.0;
 
 /* Routines in this module */
 void Slock(SDL_Surface *);
 void Sulock(SDL_Surface *);
-void save_text(void);
-void restore_text(void);
 void outtext(int, int, int);
 int check_mouse(SDL_Event);
 void set_mouse_scale(void);
@@ -150,7 +148,7 @@ void SetupSDL(void)
   if ( SDL_Init(SDL_init_flags) < 0 )
     {
       sprintf(msg, "Unable to initialize SDL: %s\n", SDL_GetError());
-      popup_error(0, msg);
+      popup_error(4, msg);
       exit(1);
     }
 
@@ -160,14 +158,14 @@ void SetupSDL(void)
     {
       sprintf(msg, "Compiled version: %d\nLinked version: %d\n",
               compiled.major, linked.major);
-      popup_error(0, msg);
+      popup_error(4, msg);
       exit(1);
     }
 
   if (TTF_Init() < 0)
     {
       sprintf(msg, "Unable to initialize SDL TTF: %s\n", SDL_GetError());
-      popup_error(0, msg);
+      popup_error(4, msg);
       exit(1);
     }
 
@@ -221,9 +219,11 @@ void CleanupSDL(void)
   SDL_DestroyRenderer(sdlRenderer);
   if (sdlTexture != NULL)
     SDL_DestroyTexture(sdlTexture);
+  if (sdlTextTexture != NULL)
+    SDL_DestroyTexture(sdlTextTexture);
   SDL_FreeSurface(mainscrn);
   SDL_FreeSurface(backscrn);
-  SDL_FreeSurface(backtext);
+  SDL_FreeSurface(textscrn);
 
   SDL_FreeCursor(mousecurser);
 
@@ -279,128 +279,203 @@ void popup_error (int num, char *msg)
 
 void set_mouse_scale(void)
 {
+  /* Mouse motion is based on window (renderer) size.
+   * This routine scales the mouse motion to the image size.
+  */
   int rend_size_w;
   int rend_size_h;
-  SDL_Rect max_win_size;
 
-  SDL_GetDisplayUsableBounds(display_in_use, &max_win_size);
   SDL_GetRendererOutputSize(sdlRenderer, &rend_size_w, &rend_size_h);
 
-  if (window_is_fullscreen)
-  {
-     mouse_scale_x = (double)sxdots / (double)max_win_size.w;
-     mouse_scale_y = (double)sydots / (double)max_win_size.h;
-  }
-  else
-  {
-     if (rend_size_w > max_win_size.w)
-        mouse_scale_x = (double)rend_size_w / (double)max_win_size.w;
-     else
-        mouse_scale_x = (double)sxdots / (double)rend_size_w;
-     if (rend_size_h > max_win_size.h)
-        mouse_scale_y = (double)rend_size_h / (double)max_win_size.h;
-     else
-        mouse_scale_y = (double)sydots / (double)rend_size_h;
-  }
+  mouse_scale_x = (double)sxdots / (double)rend_size_w;
+  mouse_scale_y = (double)sydots / (double)rend_size_h;
 }
 
-void ResizeScreen(int mode)
-{
-  /* mode = 0 for initial startup */
-  /* mode = 1 to resize the graphics window */
-  /* mode = 2 to resize the text window */
+static int doneonce = 0;
+int winsize = SF7;
 
+void SetupWindow(void)
+{
+  SDL_Surface *WinIcon;
   Uint32 rmask, gmask, bmask, amask;
   char msg[80];
-  int bpp; /* bits per pixel for graphics mode */
-  int fontsize;
   int rend_size_w;
   int rend_size_h;
-  SDL_Rect max_win_size;
+  int bpp; /* bits per pixel for graphics mode */
+  int fontsize;
+#if DEBUG
+  int win_size_w;
+  int win_size_h;
+#endif
 
-  SDL_GetDisplayUsableBounds(display_in_use, &max_win_size);
+  if (doneonce)
+     return;
+  else
+     doneonce = 1;
 
-  /*
-   * Initialize the display to 1024x768,
-   */
-  if (mode == 0)
+  switch (winsize)
+  {
+     case SF6:
+        sdlWindow = SDL_CreateWindow(0, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+                    800, 600, SDL_video_flags);
+        break;
+     case SF7:
+     default:
+        sdlWindow = SDL_CreateWindow(0, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+                    1024, 768, SDL_video_flags);
+        break;
+     case SF9:
+        sdlWindow = SDL_CreateWindow(0, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+                    1280, 1024, SDL_video_flags);
+        break;
+  }
+
+  if ( sdlWindow == NULL ) /* No luck, bail out */
     {
-      SDL_Surface *WinIcon;
-
-      if (initmode < 0)   /* make sure we have something reasonable */
-          adapter = check_vidmode_key(0, check_vidmode_keyname("SF7"));  /* Default to SF7 1024x768 */
-      else
-          adapter = initmode;
-      memcpy((char *)&videoentry,(char *)&videotable[adapter],
-             sizeof(videoentry));  /* the selected entry now in videoentry */
-      if ( sdlWindow == NULL ) /* Don't create one if we already have one */
-        {
-         if (videoentry.dotmode == 11)
-            {
-            sdlWindow = SDL_CreateWindow(0, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-                        1024, 768, SDL_video_flags);
-            }
-         else
-            sdlWindow = SDL_CreateWindow(0, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-                        videoentry.xdots, videoentry.ydots, SDL_video_flags);
-        }
-
-      if ( sdlWindow == NULL ) /* No luck, bail out */
-        {
-          SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Window creation fail : %s\n",SDL_GetError());
-          exit(1);
-        }
-
-      SDL_SetWindowMinimumSize(sdlWindow, 640, 400);
-      WinIcon = SDL_LoadBMP("Fractint.bmp");
-      if (WinIcon != NULL)
-      {
-        SDL_SetWindowIcon( sdlWindow, WinIcon );
-        SDL_FreeSurface( WinIcon );
-      }
-      Image_Data.color_info = NULL;
+      sprintf(msg, "Window creation fail : %s\n", SDL_GetError());
+      popup_error(4, msg);
+      SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Window creation fail : %s\n",SDL_GetError());
+      exit(1);
     }
-  else if (mode == 1)  /*  graphics window  */
-    {
-      memcpy((char *)&videoentry,(char *)&videotable[adapter],
-             sizeof(videoentry));  /* the selected entry now in videoentry */
-      SDL_SetWindowSize(sdlWindow, videotable[adapter].xdots, videotable[adapter].ydots);
-      SDL_SetWindowPosition(sdlWindow, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED);
-      if (calc_status != 4) /* if not complete */
-          calc_status = 0;  /* can't resume anyway */
-    /* need to free the screens & texture here */
-      SDL_DestroyRenderer(sdlRenderer);
-      sdlRenderer = NULL;
-      SDL_DestroyTexture(sdlTexture);
-      sdlTexture = NULL;
-      SDL_FreeSurface(mainscrn);
-      mainscrn = NULL;
-      SDL_FreeSurface(backscrn);
-      backscrn = NULL;
-      SDL_FreeSurface(backtext);
-      backtext = NULL;
-      free(Image_Data.color_info);
-      Image_Data.color_info = NULL;
-    }
-  else  /*  mode == 2  text window  */
-    {
-      if (adapter < 0)   /* make sure we have something reasonable */
-{
-          adapter = check_vidmode_key(0, check_vidmode_keyname("SF7"));  /* Default to SF7 1024x768 */
-      memcpy((char *)&videoentry,(char *)&videotable[adapter],
-             sizeof(videoentry));  /* the selected entry now in videoentry */
-      if (!window_is_fullscreen)
-      {
-         SDL_SetWindowSize(sdlWindow, videoentry.xdots, videoentry.ydots);
-         SDL_SetWindowPosition(sdlWindow, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED);
-      }
-}
-    }
+
+  WinIcon = SDL_LoadBMP("Fractint.bmp");
+  if (WinIcon != NULL)
+  {
+    SDL_SetWindowIcon( sdlWindow, WinIcon );
+    SDL_FreeSurface( WinIcon );
+  }
+  Image_Data.color_info = NULL;
 
 #if SDL_VERSION_ATLEAST(2, 0, 16)
   /*  this next needs SDL 2.0.16 */
   SDL_SetWindowKeyboardGrab(sdlWindow, SDL_TRUE);
 #endif
+
+  sdlPixelfmt = SDL_GetWindowPixelFormat(sdlWindow);
+  bpp = SDL_BYTESPERPIXEL(sdlPixelfmt) * 8;
+
+#if DEBUG
+  SDL_GetWindowSize(sdlWindow, &win_size_w, &win_size_h);
+  sprintf(msg, "%s at %dx%dx%d", Fractint, win_size_w, win_size_h, bpp);
+#elif PRODUCTION
+  sprintf(msg, Fractint);
+#else
+  sprintf(msg, "%s SDL Developmental Alpha", Fractint);
+#endif /* 1 */
+
+  SDL_SetWindowTitle(sdlWindow, msg);
+
+  if ( sdlRenderer != NULL ) /* Don't create two with same name */
+      SDL_DestroyRenderer(sdlRenderer);
+  sdlRenderer = SDL_CreateRenderer(sdlWindow, -1, SDL_renderer_flags);
+
+  if ( sdlRenderer == NULL )
+    {
+      sprintf(msg, "Render creation for window surface fail : %s\n", SDL_GetError());
+      popup_error(4, msg);
+      SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Render creation fail : %s\n",SDL_GetError());
+      exit(1);
+    }
+
+  SDL_GetRendererOutputSize(sdlRenderer, &rend_size_w, &rend_size_h);
+
+  /* initialize screen to black */
+  SDL_SetRenderDrawColor(sdlRenderer, 0, 0, 0, 255);
+  SDL_RenderClear(sdlRenderer);
+  SDL_RenderPresent(sdlRenderer);
+
+  textrowbytes = SDL_BYTESPERPIXEL(sdlPixelfmt) * rend_size_w;
+
+  if ( sdlTextTexture != NULL ) /* Don't create two with same name */
+      SDL_DestroyTexture(sdlTextTexture);
+  sdlTextTexture = SDL_CreateTexture(sdlRenderer, sdlPixelfmt, SDL_TEXTUREACCESS_STREAMING, rend_size_w, rend_size_h);
+
+  if ( sdlTextTexture == NULL )
+      {
+      sprintf(msg, "%s\n", SDL_GetError());
+      SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Text Texture creation fail : %s\n",SDL_GetError());
+      popup_error(4, msg);
+      exit(1);
+      }
+
+#if BYTE_ORDER == BIG_ENDIAN
+    rmask = 0xff000000;
+    gmask = 0x00ff0000;
+    bmask = 0x0000ff00;
+    amask = 0x000000ff;
+#else
+    rmask = 0x000000ff;
+    gmask = 0x0000ff00;
+    bmask = 0x00ff0000;
+    amask = 0xff000000;
+#endif
+
+  if (textscrn == NULL)
+  {
+    textscrn = SDL_CreateRGBSurface(0, rend_size_w, rend_size_h, bpp, rmask, gmask, bmask, amask);
+  }
+
+#if DEBUG
+  if (textscrn == NULL )
+      {
+      sprintf(msg, "No textscrn.\n");
+      popup_error(0, msg);
+      }
+#endif
+
+  SDL_FillRect(textscrn, NULL, 0);
+
+  if (font != NULL)
+    {
+      TTF_CloseFont(font);
+      font = NULL;
+    }
+  fontsize = (int)(rend_size_h / 34) + 1; /* arbitrary font size, not too big */
+  font = TTF_OpenFont("crystal.ttf", fontsize);
+  if ( font == NULL )
+    {
+      sprintf(msg, "Missing file crystal.ttf or couldn't set font.  Fractint will crash.\n");
+      popup_error(4, msg);
+      exit(1);
+    }
+
+  /* get text height and width in pixels */
+  TTF_SizeText(font,"H",&txt_wt,&txt_ht);
+
+  return;
+}
+
+
+void ResizeScreen(void)
+{
+  Uint32 rmask, gmask, bmask, amask;
+  char msg[80];
+  int bpp; /* bits per pixel for graphics mode */
+
+  /*
+   * Initialize the display to 1024x768,
+   */
+  if (adapter < 0)   /* make sure we have something reasonable */
+  {
+      adapter = check_vidmode_key(0, check_vidmode_keyname("SF7"));  /* Default to SF7 1024x768 */
+         memcpy((char *)&videoentry,(char *)&videotable[adapter],
+            sizeof(videoentry));  /* the selected entry now in videoentry */
+  }
+  if (calc_status != 4) /* if not complete */
+      calc_status = 0;  /* can't resume anyway */
+
+  if ( sdlTexture != NULL )
+      SDL_DestroyTexture(sdlTexture);
+  sdlTexture = NULL;
+  if (mainscrn != NULL)
+      SDL_FreeSurface(mainscrn);
+  mainscrn = NULL;
+  if (backscrn != NULL)
+      SDL_FreeSurface(backscrn);
+  backscrn = NULL;
+  if (Image_Data.color_info != NULL)
+      free(Image_Data.color_info);
+  Image_Data.color_info = NULL;
 
   sxdots = videoentry.xdots;
   sydots = videoentry.ydots;
@@ -416,58 +491,21 @@ void ResizeScreen(int mode)
       Image_Data.color_info = (long *)malloc(sxdots * sydots * sizeof(long));
   }
 
-  if ( sdlRenderer != NULL ) /* Don't create two with same name */
-      SDL_DestroyRenderer(sdlRenderer);
-  sdlRenderer = SDL_CreateRenderer(sdlWindow, -1, SDL_renderer_flags);
-  if ( sdlRenderer == NULL )
-    {
-      sprintf(msg, "Render creation for surface fail : %s\n", SDL_GetError());
-      popup_error(0, msg);
-      exit(1);
-    }
-
-  SDL_GetRendererOutputSize(sdlRenderer, &rend_size_w, &rend_size_h);
-  if (debugflag == 10000)
-  {
-    if (rend_size_w > max_win_size.w || rend_size_h > max_win_size.h)
-    {
-      sprintf(msg, "Selected video mode greater than Window size.\n");
-      popup_error(2, msg);
-     }
-  }
-
-  /* initialize screen to black */
-  SDL_SetRenderDrawColor(sdlRenderer, 0, 0, 0, 255);
-  SDL_RenderClear(sdlRenderer);
-  SDL_RenderPresent(sdlRenderer);
-
-  sdlPixelfmt = SDL_GetWindowPixelFormat(sdlWindow);
   bpp = SDL_BYTESPERPIXEL(sdlPixelfmt) * 8;
+
   rowbytes = SDL_BYTESPERPIXEL(sdlPixelfmt) * sxdots;
   if (dotmode == 0)
     videoentry.dotmode = bpp;
 
-#if DEBUG
-  sprintf(msg, "%s at %dx%dx%d", Fractint, sxdots, sydots, bpp);
-#elif PRODUCTION
-  sprintf(msg, Fractint);
-#else
-  sprintf(msg, "%s SDL Developmental Alpha", Fractint);
-#endif /* 1 */
-
-  SDL_SetWindowTitle(sdlWindow, msg);
-
-  if ( sdlTexture != NULL ) /* Don't create two with same name */
-      SDL_DestroyTexture(sdlTexture);
   sdlTexture = SDL_CreateTexture(sdlRenderer, sdlPixelfmt, SDL_TEXTUREACCESS_STREAMING, sxdots, sydots);
 
-#if DEBUG
   if ( sdlTexture == NULL )
       {
       sprintf(msg, "%s\n", SDL_GetError());
-      popup_error(0, msg);
+      SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Image Texture creation fail : %s\n",SDL_GetError());
+      popup_error(4, msg);
+      exit(1);
       }
-#endif
 
 #if BYTE_ORDER == BIG_ENDIAN
     rmask = 0xff000000;
@@ -481,33 +519,26 @@ void ResizeScreen(int mode)
     amask = 0xff000000;
 #endif
 
-  if (mainscrn == NULL) /* assume all need to be created */
-  {
-    mainscrn = SDL_CreateRGBSurface(0, sxdots, sydots, bpp, rmask, gmask, bmask, amask);
-    backscrn = SDL_CreateRGBSurface(0, sxdots, sydots, bpp, rmask, gmask, bmask, amask);
-    backtext = SDL_CreateRGBSurface(0, sxdots, sydots, bpp, rmask, gmask, bmask, amask);
-  }
+  mainscrn = SDL_CreateRGBSurface(0, sxdots, sydots, bpp, rmask, gmask, bmask, amask);
+  backscrn = SDL_CreateRGBSurface(0, sxdots, sydots, bpp, rmask, gmask, bmask, amask);
+
 #if DEBUG
   if (mainscrn == NULL )
       {
       sprintf(msg, "No mainscrn.\n");
-      popup_error(0, msg);
+      popup_error(4, msg);
+      exit(1);
       }
   if (backscrn == NULL )
       {
       sprintf(msg, "No backscrn.\n");
-      popup_error(0, msg);
-      }
-  if (backtext == NULL )
-      {
-      sprintf(msg, "No backtext.\n");
-      popup_error(0, msg);
+      popup_error(4, msg);
+      exit(1);
       }
 #endif
 
   SDL_FillRect(mainscrn, NULL, 0);
   SDL_FillRect(backscrn, NULL, 0);
-  SDL_FillRect(backtext, NULL, 0);
 
   sdlPixelFormat = mainscrn->format;
   if (mousecurser == NULL)
@@ -516,23 +547,6 @@ void ResizeScreen(int mode)
       SDL_SetCursor(mousecurser);
     }
   set_mouse_scale();
-
-  if (font != NULL)
-    {
-      TTF_CloseFont(font);
-      font = NULL;
-    }
-  fontsize = (int)(sydots / 34) + 1; /* arbitrary font size, not too big */
-  font = TTF_OpenFont("crystal.ttf", fontsize);
-  if ( font == NULL )
-    {
-      sprintf(msg, "Missing file crystal.ttf, couldn't set font.  Fractint will crash.\n");
-      popup_error(0, msg);
-      exit(1);
-    }
-
-  /* get text height and width in pixels */
-  TTF_SizeText(font,"H",&txt_wt,&txt_ht);
 
   return;
 }
@@ -684,7 +698,7 @@ void adapter_detect(void)
   sydots  = ydots;
   done_detect = 1;
   dotmode = SDL_BYTESPERPIXEL(sdlPixelfmt) * 8;
-//  update_fractint_cfg();
+/*  update_fractint_cfg(); */
 }
 
 int checkwindowsize(int x, int y)
@@ -717,10 +731,9 @@ void startvideo(void)
       colors = videoentry.colors;
     }
 
-/* initialize mainscrn, backscrn, and backtext surfaces to inside color */
+/* initialize mainscrn and backscrn surfaces to inside color */
   SDL_FillRect(mainscrn, NULL, map_to_pixel(inside & andcolor));
   SDL_FillRect(backscrn, NULL, map_to_pixel(inside & andcolor));
-  SDL_FillRect(backtext, NULL, map_to_pixel(inside & andcolor));
 
   memset(Image_Data.color_info, 0, Image_Data.sizex * Image_Data.sizey * sizeof(long));
   /* initialize window to black */
@@ -811,7 +824,7 @@ void writevideo(int x, int y, U32 pixel)
      sprintf(msg, "Plotting x = %li and y = %li.\n", x, y);
      popup_error(2, msg);
   }
-#endif // DEBUG
+#endif /* DEBUG */
 
   bufp = (long *)Image_Data.color_info + Image_Data.sizex * y + x;
   *bufp = pixel;
@@ -821,8 +834,11 @@ void writevideo(int x, int y, U32 pixel)
 
 void updateimage(void)
 {
-  if (dotmode == 11)
-    SDL_UpdateTexture( sdlTexture, NULL, mainscrn->pixels, rowbytes );
+  if (dotmode == 11 || screenctr != -1)
+  {
+    SDL_UpdateTexture( sdlTextTexture, NULL, textscrn->pixels, textrowbytes );
+    SDL_RenderCopy(sdlRenderer, sdlTextTexture, NULL, NULL);
+  }
   else
   {
     void *pixels;
@@ -830,8 +846,8 @@ void updateimage(void)
     SDL_LockTexture(sdlTexture, NULL, &pixels, &rowbytes);
     memcpy(pixels, mainscrn->pixels, rowbytes*sydots);
     SDL_UnlockTexture(sdlTexture);
+    SDL_RenderCopy(sdlRenderer, sdlTexture, NULL, NULL);
   }
-  SDL_RenderCopy(sdlRenderer, sdlTexture, NULL, NULL);
   SDL_RenderPresent(sdlRenderer);
 }
 
@@ -1041,11 +1057,11 @@ void restorevideopalette(void)
 
 void setclear (void)
 {
-  /* clears the screen to the text background */
+  /* clears the text screen to black and zeroes the text arrays */
   int r, c;
 
   /*  Fill the screen with black  */
-  SDL_FillRect( mainscrn, NULL, SDL_MapRGB( mainscrn->format, 0, 0, 0 ) );
+  SDL_FillRect( textscrn, NULL, SDL_MapRGB( textscrn->format, 0, 0, 0 ) );
 
   for (r = 0; r < TEXT_HEIGHT; r++)
     {
@@ -1054,7 +1070,6 @@ void setclear (void)
           text_attr[r][c] = 0;
           text_screen[r][c] = ' ';
         }
-      outtext(r, 0, c); /* clear a row at a time */
     }
 }
 
@@ -1063,7 +1078,7 @@ void starttext(void)
   /* Setup text palette */
   int i;
 
-  if (mainscrn->format->BitsPerPixel == 8)
+  if (textscrn->format->BitsPerPixel == 8)
     {
       savevideopalette();
       for (i = 0; i < 16; i++)
@@ -1082,8 +1097,7 @@ void starttext(void)
           }
         }
       spindac(0,1);
-      SDL_SetPaletteColors(mainscrn->format->palette, XlateText, 0, 16);
-      SDL_SetPaletteColors(backtext->format->palette, XlateText, 0, 16);
+      SDL_SetPaletteColors(textscrn->format->palette, XlateText, 0, 16);
     }
 }
 
@@ -1091,7 +1105,7 @@ void outtext(int row, int col, int max_c)
 {
   /* Takes the text in text_screen[row][] with */
   /*     attributes in text_attr[row][] */
-  /* and puts it on the screen */
+  /* and puts it on the text screen */
 
   SDL_Color color, bgcolor;
   SDL_Surface *text_surface = NULL;
@@ -1154,7 +1168,7 @@ void outtext(int row, int col, int max_c)
     }
   else
     {
-      SDL_BlitSurface(text_surface, NULL, mainscrn, &text_rect);
+      SDL_BlitSurface(text_surface, NULL, textscrn, &text_rect);
       SDL_FreeSurface(text_surface);
     }
 }
@@ -1169,109 +1183,119 @@ void restore_screen(void)
   SDL_BlitSurface( backscrn, NULL, mainscrn, NULL );
 }
 
-void save_text(void)
-{
-  SDL_BlitSurface( mainscrn, NULL, backtext, NULL ); /* save text screen */
-  setclear();
-}
-
-void restore_text(void)
-{
-  SDL_BlitSurface( backtext, NULL, mainscrn, NULL );
-}
-
 /*
  * The stackscreen()/unstackscreen() functions were originally
  * ported to Xfractint.
  * These functions are useful for switching between different text screens.
  * For example, looking at a parameter entry using F2.
+ * The discardscreen() function dumps the text screen(s) and returns to the video screen.
  */
 
+extern void setfortext (void);
+extern void setforgraphics (void);
+
 #define MAXSCREENS 3
-/*
- * Don't need next.  Never checked.
- * May need something if two text screens isn't enough
-static BYTE *savescreen[MAXSCREENS];
-static int saverc[MAXSCREENS+1];
-*/
+
+struct CURSOR_POSITION
+{
+  int row;
+  int col;
+};
+
+static char stack_text_screen[MAXSCREENS][TEXT_HEIGHT][TEXT_WIDTH];
+static int  stack_text_attr[MAXSCREENS][TEXT_HEIGHT][TEXT_WIDTH];
+static struct CURSOR_POSITION stack_text_cursor[MAXSCREENS];
 
 void stackscreen(void)
 {
-  int r, c;
+  int i, r, c;
 #if 0
-  fprintf(stderr, "stackscreen, %i screens stacked\n", screenctr+1);
+  char msg[40];
+  sprintf(msg, "stackscreen, %i screens stacked\n", screenctr+1);
+  SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION,
+                           "Stackscreen Information",
+                           msg,
+                           NULL);
 #endif
 
-  if (screenctr == 0)
+  /* video image displayed when screenctr == -1 */
+   if(*s_makepar == 0)
+      return;
+
+  if (++screenctr) /* already have some stacked */
     {
-      save_screen();
-    }
-  if (screenctr == 1)
-    {
+      static char msg[]={"stackscreen overflow"};
+      if ((i = screenctr - 1) >= MAXSCREENS) { /* bug, missing unstack? */
+         stopmsg(1,msg);
+         exit(1);
+         }
       for (r = 0; r < TEXT_HEIGHT; r++)
         for (c = 0; c < TEXT_WIDTH; c++)
           {
-            stack_text_screen[r][c] = text_screen[r][c];
-            stack_text_attr[r][c] = text_attr[r][c];
+            stack_text_screen[i][r][c] = text_screen[r][c];
+            stack_text_attr[i][r][c] = text_attr[r][c];
           }
-      save_text();
+      stack_text_cursor[i].row = textrow;
+      stack_text_cursor[i].col = textcol;
+      setclear();
     }
-  if (screenctr < (MAXSCREENS - 1))
-    screenctr++;
+   else
+    {
+      /* don't do anything since screenctr != -1 and text will be displayed */
+    }
 }
 
 void unstackscreen(void)
 {
   int r, c;
 #if 0
-  fprintf(stderr, "unstackscreen, %i screens stacked\n", screenctr);
+  char msg[40];
+  sprintf(msg, "unstackscreen, %i screens stacked\n", screenctr);
+  SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION,
+                           "Stackscreen Information",
+                           msg,
+                           NULL);
 #endif
-  if (screenctr > 1 || dotmode == 11)
+   if(*s_makepar == 0)
+      return;
+
+  if (--screenctr >= 0) /* unstack */
     {
-      restore_text();
       for (r = 0; r < TEXT_HEIGHT; r++)
         {
           for (c = 0; c < TEXT_WIDTH; c++)
             {
-              text_screen[r][c] = stack_text_screen[r][c];
-              text_attr[r][c] = stack_text_attr[r][c];
+              text_screen[r][c] = stack_text_screen[screenctr][r][c];
+              text_attr[r][c] = stack_text_attr[screenctr][r][c];
+              outtext(r, c, c+1); /* restore a character at a time */
             }
         }
+      textrow = stack_text_cursor[screenctr].row;
+      textcol = stack_text_cursor[screenctr].col;
     }
-  else
+  else /* video image displayed when screenctr == -1 */
     {
-      restore_screen(); /* restore screen */
-      for (r = 0; r < TEXT_HEIGHT; r++) /* zero text array */
-        {
-          for (c = 0; c < TEXT_WIDTH; c++)
-            {
-              text_screen[r][c] = ' ';
-              text_attr[r][c] = 0;
-            }
-        }
+      screenctr = -1;
+      setclear();
     }
-  screenctr--;
-  if (dotmode == 11)
-    screenctr = 1; /* leave in text mode */
-  if (screenctr < 0) /* shouldn't happen */
-    screenctr = 0;
 }
 
 void discardscreen(void)
 {
 #if 0
-  fprintf(stderr, "discardscreen, %i screens stacked\n", screenctr);
+  char msg[40];
+  sprintf(msg, "discardscreen, %i screens stacked\n", screenctr);
+  SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION,
+                           "Stackscreen Information",
+                           msg,
+                           NULL);
 #endif
-  if (dotmode == 11 || dotmode == 3)
-    {
-      screenctr = 1; /* in text mode */
-      restore_text();
-    }
-  else
-    {
-      screenctr = 0;   /* unstack all */
-      restore_screen(); /* restore screen */
-    }
+   if(*s_makepar == 0)
+      return;
+
+  screenctr = -1;   /* unstack all */
+  setclear();      /* clear text arrays */
+  startvideo();    /* clear video */
 }
 
 void putstring (int row, int col, int attr, CHAR *msg)
@@ -1331,8 +1355,9 @@ void putstring (int row, int col, int attr, CHAR *msg)
     max_c = c;
 
   /* output the last line here */
-
-  outtext(r, s_c, max_c);
+  if (max_c - s_c > 0)
+    outtext(r, s_c, max_c);
+  return;
 }
 
 /*
@@ -1359,6 +1384,8 @@ void setattr (int row, int col, int attr, int count)
   s_c = c = textcol + textcbase;
 
   assert(count <= TEXT_WIDTH * TEXT_HEIGHT);
+  if (count == 0)
+    return;
   while (count)
     {
       assert(r < TEXT_HEIGHT);
@@ -1376,6 +1403,7 @@ void setattr (int row, int col, int attr, int count)
     }
   /* refresh text */
   outtext(r, s_c, c);
+  return;
 }
 
 /*
@@ -1440,43 +1468,43 @@ static int translate_key(SDL_KeyboardEvent *key)
       switch (key->keysym.sym)
         {
         case SDLK_F1:
-         if (screenctr == 0)
+         if (screenctr == -1)
           return CF1;
          break;
         case SDLK_F2:
-         if (screenctr == 0)
+         if (screenctr == -1)
           return CF2;
          break;
         case SDLK_F3:
-         if (screenctr == 0)
+         if (screenctr == -1)
           return CF3;
          break;
         case SDLK_F4:
-         if (screenctr == 0)
+         if (screenctr == -1)
           return CF4;
          break;
         case SDLK_F5:
-         if (screenctr == 0)
+         if (screenctr == -1)
           return CF5;
          break;
         case SDLK_F6:
-         if (screenctr == 0)
+         if (screenctr == -1)
           return CF6;
          break;
         case SDLK_F7:
-         if (screenctr == 0)
+         if (screenctr == -1)
           return CF7;
          break;
         case SDLK_F8:
-         if (screenctr == 0)
+         if (screenctr == -1)
           return CF8;
          break;
         case SDLK_F9:
-         if (screenctr == 0)
+         if (screenctr == -1)
           return CF9;
          break;
         case SDLK_F10:
-         if (screenctr == 0)
+         if (screenctr == -1)
           return CF10;
          break;
         case SDLK_TAB:
@@ -1566,43 +1594,43 @@ static int translate_key(SDL_KeyboardEvent *key)
         case SDLK_SLASH:
           return SDLK_QUESTION;
         case SDLK_F1:
-         if (screenctr == 0)
+         if (screenctr == -1)
           return SF1;
          break;
         case SDLK_F2:
-         if (screenctr == 0)
+         if (screenctr == -1)
           return SF2;
          break;
         case SDLK_F3:
-         if (screenctr == 0)
+         if (screenctr == -1)
           return SF3;
          break;
         case SDLK_F4:
-         if (screenctr == 0)
+         if (screenctr == -1)
           return SF4;
          break;
         case SDLK_F5:
-         if (screenctr == 0)
+         if (screenctr == -1)
           return SF5;
          break;
         case SDLK_F6:
-         if (screenctr == 0)
+         if (screenctr == -1)
           return SF6;
          break;
         case SDLK_F7:
-         if (screenctr == 0)
+         if (screenctr == -1)
           return SF7;
          break;
         case SDLK_F8:
-         if (screenctr == 0)
+         if (screenctr == -1)
           return SF8;
          break;
         case SDLK_F9:
-         if (screenctr == 0)
+         if (screenctr == -1)
           return SF9;
          break;
         case SDLK_F10:
-         if (screenctr == 0)
+         if (screenctr == -1)
           return SF10;
          break;
         case SDLK_TAB:
@@ -1643,43 +1671,43 @@ static int translate_key(SDL_KeyboardEvent *key)
       switch (key->keysym.sym)
         {
         case SDLK_F1:
-         if (screenctr == 0)
+         if (screenctr == -1)
           return AF1;
          break;
         case SDLK_F2:
-         if (screenctr == 0)
+         if (screenctr == -1)
           return AF2;
          break;
         case SDLK_F3:
-         if (screenctr == 0)
+         if (screenctr == -1)
           return AF3;
          break;
         case SDLK_F4:
-         if (screenctr == 0)
+         if (screenctr == -1)
           return AF4;
          break;
         case SDLK_F5:
-         if (screenctr == 0)
+         if (screenctr == -1)
           return AF5;
          break;
         case SDLK_F6:
-         if (screenctr == 0)
+         if (screenctr == -1)
           return AF6;
          break;
         case SDLK_F7:
-         if (screenctr == 0)
+         if (screenctr == -1)
           return AF7;
          break;
         case SDLK_F8:
-         if (screenctr == 0)
+         if (screenctr == -1)
           return AF8;
          break;
         case SDLK_F9:
-         if (screenctr == 0)
+         if (screenctr == -1)
           return AF9;
          break;
         case SDLK_F10:
-         if (screenctr == 0)
+         if (screenctr == -1)
           return AF10;
          break;
         case SDLK_TAB:
@@ -1753,7 +1781,7 @@ static int translate_key(SDL_KeyboardEvent *key)
      return F2;
      break;
     case SDLK_F3:
-     if (screenctr == 0)
+     if (screenctr == -1)
       return F3;
      break;
     case SDLK_F4:
@@ -1769,15 +1797,15 @@ static int translate_key(SDL_KeyboardEvent *key)
      return F7;
      break;
     case SDLK_F8:
-     if (screenctr == 0)
+     if (screenctr == -1)
       return F8;
      break;
     case SDLK_F9:
-     if (screenctr == 0)
+     if (screenctr == -1)
       return F9;
      break;
     case SDLK_F10:
-     if (screenctr == 0)
+     if (screenctr == -1)
       return F10;
      break;
     case SDLK_INSERT:
@@ -1840,7 +1868,7 @@ int check_mouse(SDL_Event mevent)
   int bnum = 0;
   int keyispressed = 0;
 
-  if (screenctr) /* don't do it, we're on a text screen */
+  if (screenctr != -1) /* don't do it, we're on a text screen */
     return (0);
 
   if (lookatmouse == 0)
@@ -1960,7 +1988,7 @@ int check_mouse(SDL_Event mevent)
     }
 
   if (right_mouse_button_down)
-    (*plot)(mevent.button.x - sxoffs, mevent.button.y - syoffs, 4);
+    (*plot)((mevent.button.x * mouse_scale_x) - sxoffs, (mevent.button.y * mouse_scale_y) - syoffs, 4);
   return (keyispressed);
 }
 
@@ -1969,7 +1997,7 @@ int get_key_event(int block)
   SDL_Event event;
   int keyispressed = 0;
 
-  if(screenctr != 0 || editpal_cursor) /* On a text screen or palette editor: */
+  if(screenctr != -1 || editpal_cursor) /* On a text screen or palette editor: */
     SDL_ShowCursor(SDL_DISABLE); /*   Hide the mouse cursor */
   else                           /* On an image screen: */
     SDL_ShowCursor(SDL_ENABLE);  /*   Show the mouse cursor */
@@ -2020,7 +2048,7 @@ int get_key_event(int block)
               keyispressed = check_mouse(event);
               break;
             case SDL_MOUSEBUTTONDOWN:
-             if (!screenctr)
+             if (screenctr == -1)
               {
               if (lookatmouse == 3 || zoomoff == 0)
                 {
@@ -2037,13 +2065,13 @@ int get_key_event(int block)
               }
               break;
             case SDL_MOUSEBUTTONUP:
-             if (!screenctr)
+             if (screenctr == -1)
               {
               if (event.button.button == SDL_BUTTON_LEFT)
                 {
                 if (left_mouse_button_down == 1 && button_held == 1)
                    {
-//                      init_pan_or_recalc(0);
+/*                      init_pan_or_recalc(0); */
                       if(SDL_GetModState() & KMOD_CTRL) /* Control key down */
                         keyispressed = ENTER;
                    }
@@ -2161,7 +2189,7 @@ int time_to_update(void)
       else
         return (0);
     }
-  else if (screenctr > 0)
+  else if (screenctr != -1)
     {
       if (next_time <= now)
         {
