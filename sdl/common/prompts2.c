@@ -35,7 +35,7 @@ int cmpdbl(double, double);
 #define   SUBDIR         16
 #define   MAXNUMFILES    2977L
 
-struct DIR_SEARCH DTA;          /* Allocate DTA and define structure */
+extern struct DIR_SEARCH DTA;          /* Allocate DTA and define structure */
 
 #define GETFORMULA 0
 #define GETLSYS    1
@@ -43,7 +43,7 @@ struct DIR_SEARCH DTA;          /* Allocate DTA and define structure */
 #define GETPARM    3
 
 char commandmask[MAX_NAME] = {"*.par"};
-char buf[3200];
+
 
 /* --------------------------------------------------------------------- */
 /*
@@ -71,6 +71,7 @@ int get_toggles()
 {
   static FCODE o_hdg[]={"Basic Options\n(not all combinations make sense)"};
   char hdg[sizeof(o_hdg)];
+  char buf[3200];
   char *choices[20];
   char *ptr;
   int oldhelpmode;
@@ -381,6 +382,7 @@ int get_toggles2()
                        };
   char hdg[sizeof(o_hdg)];
   char *ptr;
+  char buf[3200];
   char *choices[18];
   int oldhelpmode;
 
@@ -534,6 +536,7 @@ int passes_options(void)
   static FCODE pressf2[] = {"\n(Press "FK_F2" for screen coordinates)"};
   static FCODE pressf6[] = {"\n(Press "FK_F6" for image coordinates)"};
   char hdg[sizeof(o_hdg)+sizeof(pressf2)+sizeof(pressf6)];
+  char buf[3200];
   char *ptr;
   char *choices[20];
   int oldhelpmode;
@@ -675,6 +678,7 @@ int get_view_params()
 {
   static FCODE o_hdg[]={"View Window Options"};
   char hdg[sizeof(o_hdg)];
+  char buf[3200];
   char *choices[16];
   char *ptr;
 
@@ -1065,6 +1069,7 @@ int get_a_number(double *x, double *y)
 {
   static FCODE o_hdg[]={"Set Cursor Coordinates"};
   char hdg[sizeof(o_hdg)];
+  char buf[3200];
   char *ptr;
   char *choices[2];
 
@@ -1611,6 +1616,7 @@ int get_corners()
 {
   char *ptr;
   struct fullscreenvalues values[15];
+  char buf[3200];
   char *prompts[15];
   static FCODE o_xprompt[]={"          X"};
   static FCODE o_yprompt[]={"          Y"};
@@ -1832,6 +1838,7 @@ static int get_screen_corners(void)
 {
   char *ptr;
   struct fullscreenvalues values[15];
+  char buf[3200];
   char *prompts[15];
   static FCODE o_xprompt[]={"          X"};
   static FCODE o_yprompt[]={"          Y"};
@@ -2089,6 +2096,7 @@ int get_browse_params()
 {
   static FCODE o_hdg[]={"Browse ('L'ook) Mode Options"};
   char hdg[sizeof(o_hdg)];
+  char buf[3200];
   char *ptr;
   char *choices[10];
 

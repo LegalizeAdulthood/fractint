@@ -1987,6 +1987,7 @@ int StandardFractal(void)       /* per pixel 1/2/b/g, called with row & col set 
 
   if (show_orbit)
     snd_time_write();
+
   while (++coloriter < maxit)
     {
       /* calculation of one orbit goes here */
@@ -3999,6 +4000,8 @@ static int tesseral(void)
 {
   struct tess *tp;
 
+  got_status = 4; /* for tab_display */
+
   guessplot = (plot != putcolor && plot != symplot2);
   tp = (struct tess *)&dstack[0];
   tp->x1 = ixstart;                              /* set up initial box */
@@ -4060,8 +4063,6 @@ static int tesseral(void)
             }
         }
     }
-
-  got_status = 4; /* for tab_display */
 
   while (tp >= (struct tess *)&dstack[0])   /* do next box */
     {

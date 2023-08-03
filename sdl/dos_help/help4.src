@@ -46,7 +46,9 @@
   comment=comment1/comment2/comment3/comment4
                            Inserts comments into PAR files.
   exitnoask=yes            bypasses the final "are you sure?" exit screen
-~FF
+  winsize=sf6|sf7|sf9      Sets Fractint window size.  This is not the image
+                           size.
+
 {Calculation Mode Parameters}
   passes=1|2|3|g|b|d|t|g1..g6|s|o  Select Single-Pass, Dual-Pass, Triple-Pass
                            Solid-Guessing, Solid-Guessing stop after pass n,
@@ -69,7 +71,7 @@
                            float/arbitrary precision transition. 
   minstack=<nnn>           For SOI (passes=s). This controls the minimum number 
                            stack memory reserved during synchronous orbits.
-~FF
+
 {Fractal Type Parameters}
   type=fractaltype         Perform this Fractal Type (Default = mandel)
                            See {Fractal Types} for a full list
@@ -91,7 +93,7 @@
   julibroteyes=nn          Distance between the virtual eyes for Julibrot
   julibrotfromto=nn/nn[/nn/nn] "From-to" parameters used for Julibrot
   miim=depth|breadth|walk[/left|right] Parameters for MIIM julias.
-~FF
+
 {Image Calculation Parameters}
   corners=[xmin/xmax/ymin/ymax[/x3rd/y3rd]]
                            Begin with these Coordinates
@@ -113,7 +115,6 @@
                            to the complex number corresponding to the screen
                            pixel. This is the default for most types.
   rseed=nnnnn              Random number seed, for reproducable Plasma Clouds
-~OnLineFF
   showdot=[auto|bright|medium|dark|nn]/size  Colors the current dot being
                            calculated color nn or an automatically calculated
                            color (-1 disables). The second parameter is the
@@ -130,7 +131,7 @@
   orbitinterval=nn         Plots every nth orbit point with passes=o.
   screencoords=yes|no      Maintain screen coordinates constant.
   orbitdrawmode=rect|line  Use rectangular mode or line mode for orbits.
-~OnLineFF
+~ONLINEFF
 {Color Parameters}
   inside=nnn|maxiter|zmag|bof60|bof61|epscr|star|per|atan|fmod
                            Fractal interior color (inside=0 for black)
@@ -171,7 +172,7 @@
   potential=nn[/nn[/nn[/16bit]]]  Continuous Potential
   invert=nn/nn/nn          Turns on inversion - turns images 'inside out'
   finattract=yes           Look for finite attractor in julia types
-~OnLineFF
+
 {Sound Parameters}
   sound=off|beep|x|y|z     Nobody ever plays with fractals at work, do they?
         /pc|fm/quant       x|y|z can be used to add sound to attractor
@@ -200,7 +201,7 @@
   attenuate=none|low|mid|high  Attenuation of high pitched notes.
   scalemap=nn|p/nn|p/nn|p/... Combined with quantization this allows selecting
                            notes on the musical scale or using a pause.
-~OnLineFF
+
 {File Parameters}
   filename=.suffix          Sets the default file extension for the <r> command
   formulafile=<path>\\filename  File for type=formula, default FRACTINT.FRM
@@ -218,8 +219,7 @@
                            saved in the file ORBITS.RAW
   overwrite=no|yes         Don't over-write existing files
   savetime=nnn             Autosave image every nnn minutes of calculation
-~FF
-
+~ONLINEFF
 {Video Parameters}
   video=xxx                Begin with this video mode (Example: Video=F2)
   askvideo=no              Skip the prompt for video mode when restoring files
@@ -233,7 +233,7 @@
                            one in which the gif was saved. Default is no.
                            Feature will be useful when cycling through a
                            group of gifs in autokey mode.
-~FF
+~ONLINEFF
 {3D Parameters}
   3d=yes|overlay           Resets 3D to defaults, starts 3D mode. If overlay
                            specified, does not clear existing graphics screen
@@ -605,6 +605,12 @@ EXITNOASK=yes\
 This option forces Fractint to bypass the final "are you sure?" exit
 screen when the ESCAPE key is pressed from the main image-generation
 screen.  Added at the request of Ward Christensen.  It's his funeral <grin>.
+
+WINSIZE=sf6|sf7|sf9\
+This option sets the size of the Fractint window.  The options are 800x600 (sf6),
+1024x768 (sf7), or 1280x1024 (sf9).  The default is 1024x768 (sf7).  The
+window can't be made full screen.  Also, the window can be minimized, but not
+resized.  The image size is still changed using <DEL>, see {"Video Parameters"}.
 ;
 ;
 ~Topic=Calculation Mode Parameters
@@ -1505,27 +1511,24 @@ Fractint uses the Simple DirectMedia Layer (SDL 2.0) cross-platform development
 library designed to provide low level access to audio, keyboard, mouse,
 joystick, and graphics hardware.  See https://libsdl.org/. 
 
-The maximum video window size is limited by SDL to 16384 X 16384.  When the
-selected video size exceeds the physical monitor size, because not all pixels are
-being displayed, the zoom box does not display correctly.  With window sizes above
-2048 X 2048, passes=1 is forced.
+The default WINDOW size is 1024x768, see {"Startup Parameters"}. This window
+can't be made full screen.  It can be minimized, but not resized.  When
+minimized, the calculation of the image will continue until complete.  The
+IMAGE size is still changed using <DEL>, see {"Video Parameters"}.
 
-Although the window size can be changed using the window border or maximizing
-the window, the actual image resolution will not change.  For calculating an image
-that is larger than the available screen size, add an entry to Fractint.cfg.
-See {Customized Video Modes\, FRACTINT.CFG}.  If the window is minimized,
-the calculation of the image will continue until complete.
+The maximum IMAGE size is limited by SDL to 16384 X 16384, unless you are
+using a disk video mode.  The limit is 46340 X 46340 in disk video mode.  When
+the selected video (image) size exceeds the current window size, because not
+all pixels are being displayed, the zoom box does not display correctly.  With
+image sizes above 2048 X 2048, passes=1 is forced.
 
-The minimum video window size is limited to 640 X 400 to allow reading of the text
-screens.  Although you can create Fractint.cfg entries with a size smaller than this,
-the window size will still be 640 X 400 and the image and text pixels will be blocky.
-Below 640 X 350, the text screens are illegible.  The easiest way around this
-limitation is to pick a window size that allows reading the text screens and then
-use the <V>iew window option.  See {View Window}.
+For calculating an image that is different from the WINDOW size, add an entry
+to Fractint.cfg.  See {Customized Video Modes\, FRACTINT.CFG}.  
 
-The Fractint window is created with a color depth that matches the color depth of
-the system Fractint is running on.  Currently, only 256 colors are implemented.  Higher
-color modes can be used, but only 256 colors will be displayed.
+The Fractint window is created with a color depth that matches the color depth
+of the system Fractint is running on.  Currently, only 256 colors are
+implemented.  Higher color video (image) modes can be used, but only 256 colors
+will be displayed.
 ;
 ;
 ~Doc-

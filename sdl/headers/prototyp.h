@@ -1038,7 +1038,7 @@ extern void decode_evolver_info(struct evolution_info *, int);
 extern void decode_orbits_info(struct orbits_info *, int);
 #endif
 #ifdef XFRACT
-extern unsigned short _rotl(unsigned short, short);
+extern unsigned short rotl(unsigned short, short);
 extern int ltoa(long, char *, int);
 extern char *strlwr(char *);
 extern int memicmp(char *, char *, int);
@@ -1052,7 +1052,8 @@ extern int strnicmp(char *, char *, int);
 
 extern void CleanupSDL(void);
 extern void popup_error (int, char *);
-extern void ResizeScreen(int);
+extern void SetupWindow (void);
+extern void ResizeScreen(void);
 extern void SetupSDL(void);
 extern void showfreemem(void);
 extern void adapter_detect(void);

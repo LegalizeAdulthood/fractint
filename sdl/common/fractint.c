@@ -246,8 +246,9 @@ restart:   /* insert key re-starts here */
 
   cmdfiles(argc,argv);         /* process the command-line */
 
+  SetupWindow();
   if (adapter < 0)
-     ResizeScreen(0);
+     ResizeScreen();
 
   dopause(0);                  /* pause for error msg if not batch */
   init_msg(0,"",NULL,0);  /* this causes getakey if init_msg called on runup */
@@ -258,7 +259,7 @@ restart:   /* insert key re-starts here */
   diskisactive = 0;                    /* disk-video is inactive */
   diskvideo = 0;                       /* disk driver is not in use */
 
-//  setvideotext();                      /* switch to text mode */
+  setvideotext();                      /* switch to text mode */
 // NOTE (jonathan#1#): Following shows up a lot, is it really necessary??? JCO
   savedac = 0;                         /* don't save the VGA DAC */
 
@@ -333,10 +334,14 @@ restorestart:
       if (stacked)
         {
           discardscreen();
+          setvideotext();
           stacked = 0;
         }
       if (read_overlay() == 0)       /* read hdr, get video mode */
+{
+        discardscreen();
         break;                      /* got it, exit */
+}
       if (browsing) /* break out of infinite loop, but lose your mind */
         showfile = 1;
       else

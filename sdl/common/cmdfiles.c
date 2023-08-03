@@ -379,6 +379,7 @@ char s_volume[] =           "volume";
 char s_warn[] =             "warn";
 char s_waterline[] =        "waterline";
 char s_wavetype[]=          "wavetype";
+char s_winsize[] =          "winsize";
 char s_xaxis[] =            "xaxis";
 char s_xyadjust[] =         "xyadjust";
 char s_xyaxis[] =           "xyaxis";
@@ -1182,6 +1183,14 @@ int cmdarg(char *curarg,int mode) /* process a single argument */
           goodbye();
         }
 
+      if (strcmp(variable, s_winsize) == 0)
+        {
+          winsize = SF7; /* set default */
+          if ((winsize = check_vidmode_keyname(value)) == 0) goto badarg;
+          if (winsize == -1) goto badarg;
+          return 1;
+        }
+
     } /* end of commands allowed only at startup */
 
   if (strcmp(variable,s_reset) == 0)
@@ -1948,7 +1957,9 @@ int cmdarg(char *curarg,int mode) /* process a single argument */
       if (Magnification > LDBL_MAX || Magnification < -LDBL_MAX)
         goto badarg;     /* ie: Magnification is +-1.#INF */
 /* The above sscanf doesn't work under mingw, so next is needed. */
+#ifndef XFRACT
       Magnification = (LDBL)floatval[2];
+#endif
       dec = getpower10(Magnification) + 4; /* 4 digits of padding sounds good */
 
       if ((dec <= DBL_DIG+1 && debugflag != 3200) || debugflag == 3400)  /* rough estimate that double is OK */

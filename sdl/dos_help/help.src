@@ -280,25 +280,19 @@ Version 20.5.00 is an update of Fractint 20.0 based on the developer's
 
 Version 20.5 is a Port to SDL 2.0
 
-Fixed palette editor font.\
-Fixed prompt/tab screen borders when a fractal type or formula has no parameters.\
-Enabled orbits window.\
-Fixed sound routines so emulation of PC speaker works and turns off when\
-  sound=no is used.\
-Fixed functionality of orbitsave=yes/no/sound so that it will now turn off\
-  when orbitsave=no is used at the command prompt screen <G>.
+Limited the window size (not the image size) to 800x600 (sf6), 1024x768 (sf7),\
+  or 1280x1024 (sf9).  The default is 1024x768 (sf7).  The startup parameter\
+  used to change this setting is, for example: winsize=sf9\
+  This is hard coded and means the window can't be made full screen. Also, the\
+  window can be minimized, but not resized once created.\
+Reworked the stackscreen(), unstackscreen(), and discardscreen() functions.
 
 Known issues:\
-Random crashes\
+Key strokes still disappear occasionally.\
 Advanced Sound Controls have not been implemented.\
 The Alt-function keys get grabbed by the system.  Selecting the Alt-Fn keys
   won't work, but using video=AFn in your sstools.ini file or from the
   command line will.\
-Starting up in a disk video mode creates a window sized based on the size
-  of the disk video mode selected instead of a reasonable size such as 
-  1024x768.\
-Resizing images using the window border or maximizing the window
-  doesn't change the actual image resolution.\
 Colors still limited to 256.  Work started on expanding to 512 colors.\
 The image browser does not work with arbitrary precision for the\
   64-bit compile (Linux).\

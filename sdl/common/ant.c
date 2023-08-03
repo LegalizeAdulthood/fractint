@@ -359,7 +359,7 @@ static void TurkMite2(int maxtur, int rule_len, char *ru, long maxpts, long wait
               y[color] = incy[idir][iy];
               dir[color] = idir;
             }
-          rule_mask = _rotl(rule_mask, 1);
+          rule_mask = rotl(rule_mask, 1);
         }
     }
 exit_ant:

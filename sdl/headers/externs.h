@@ -793,6 +793,7 @@ extern unsigned              vsp;
 extern int                   vxdots;
 extern int                   whichimage;
 extern float                 widthfp;
+extern int                   winsize;
 extern char                  workdir[];
 extern WORKLIST              worklist[MAXCALCWORK];
 extern int                   workpass;
