@@ -743,6 +743,7 @@ void startvideo(void)
   SDL_SetRenderDrawColor(sdlRenderer, 0, 0, 0, 255);
   SDL_RenderClear(sdlRenderer);
   SDL_RenderPresent(sdlRenderer);
+  screenctr = -1;
 }
 
 U32 map_to_pixel(BYTE color)
