@@ -1890,8 +1890,11 @@ static int call_line3d(BYTE *pixels, int linelen)
   return(line3d(pixels,linelen));
 }
 
+static int saved_boxcount; /* need this because savetodisk() reuses boxcount */
+
 static void note_zoom()
 {
+  saved_boxcount = boxcount;
   if (boxcount)   /* save zoombox stuff in mem before encode (mem reused) */
     {
       if ((savezoom = (char *)malloc((long)(5*boxcount))) == NULL)
@@ -1908,6 +1911,7 @@ static void note_zoom()
 
 static void restore_zoom()
 {
+  boxcount = saved_boxcount;
   if (boxcount)   /* restore zoombox arrays */
     {
       memcpy(boxx,savezoom,boxcount*2);
