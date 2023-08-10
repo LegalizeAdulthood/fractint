@@ -285,7 +285,8 @@ Limited the window size (not the image size) to 800x600 (sf6), 1024x768 (sf7),\
   used to change this setting is, for example: winsize=sf9\
   This is hard coded and means the window can't be made full screen. Also, the\
   window can be minimized, but not resized once created.\
-Reworked the stackscreen(), unstackscreen(), and discardscreen() functions.
+Reworked the stackscreen(), unstackscreen(), and discardscreen() functions.\
+Fixed 2-color disk video modes.
 
 Known issues:\
 Key strokes still disappear occasionally.\
@@ -296,8 +297,6 @@ The Alt-function keys get grabbed by the system.  Selecting the Alt-Fn keys
 Colors still limited to 256.  Work started on expanding to 512 colors.\
 The image browser does not work with arbitrary precision for the\
   64-bit compile (Linux).\
-2-color disk video modes are broken (windows).\
-Interrupting disk video initialization and canceling it causes a crash.\
 Help docs are not completely updated.  Printing docs causes crash.\
 
 Patch 14 to Version 20.4.0\

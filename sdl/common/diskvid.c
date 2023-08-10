@@ -71,7 +71,7 @@ int startdisk(void)
    if (!diskisactive)
       return(0);
    headerlength = disktarga = 0;
-   return (common_startdisk(sxdots,sydots,colors));
+   return (common_startdisk(sxdots<<1,sydots<<1,colors));
    }
 
 int pot_startdisk(void)
