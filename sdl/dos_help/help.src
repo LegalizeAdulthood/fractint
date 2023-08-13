@@ -286,7 +286,9 @@ Limited the window size (not the image size) to 800x600 (sf6), 1024x768 (sf7),\
   This is hard coded and means the window can't be made full screen. Also, the\
   window can be minimized, but not resized once created.\
 Reworked the stackscreen(), unstackscreen(), and discardscreen() functions.\
-Fixed 2-color disk video modes.
+Fixed 2-color disk video modes.\
+Fixed intro screen so it appears when no video is specified in sstools.ini.\
+Fixed crashes that occurred when saving an image after zooming with the mouse.
 
 Known issues:\
 Key strokes still disappear occasionally.\
