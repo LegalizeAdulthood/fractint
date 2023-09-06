@@ -338,7 +338,11 @@ static void pauserotate()               /* pause-the-rotate routine */
       dacbox[0][1] = 48;
       dacbox[0][2] = 48;
       spindac(0,1);                     /* show white border */
+#if 1 /* #ifndef XFRACT */
+      while (!keypressed());          /* wait for any key */
+#else
       waitkeypressed(0);                /* wait for any key */
+#endif
       dacbox[0][0] = olddac0;
       dacbox[0][1] = olddac1;
       dacbox[0][2] = olddac2;

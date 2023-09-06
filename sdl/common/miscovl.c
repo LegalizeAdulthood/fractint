@@ -1538,8 +1538,8 @@ static void put_bf(int slash,bf_t r, int prec)
   put_parm(buf);
 }
 
-#if 0
-int edit_text_colors()
+#if 1
+int edit_text_colors(void)
 {
   int save_debugflag,save_lookatmouse;
   int row,col,bkgrd;
@@ -1554,7 +1554,7 @@ int edit_text_colors()
   debugflag = 0;   /* don't get called recursively */
   lookatmouse = 2; /* text mouse sensitivity */
   row = col = bkgrd = rowt = rowf = colt = colf = 0;
-  vidmem = MK_FP(0xB800,0);
+  vidmem = (char *)boxx;
   for(;;)
     {
       if (row < 0)  row = 0;
@@ -1566,7 +1566,7 @@ int edit_text_colors()
       if (i >= 'a' && i <= 'z') i -= 32; /* uppercase */
       switch (i)
         {
-        case 27: /* esc */
+        case ESC: /* esc */
           debugflag = save_debugflag;
           lookatmouse = save_lookatmouse;
           movecursor(25,80);
@@ -1611,19 +1611,19 @@ int edit_text_colors()
         case ' ': /* next color is background */
           bkgrd = 1;
           break;
-        case 1075: /* cursor left  */
+        case LEFT_ARROW: /* cursor left  */
           --col;
           break;
-        case 1077: /* cursor right */
+        case RIGHT_ARROW: /* cursor right */
           ++col;
           break;
-        case 1072: /* cursor up    */
+        case UP_ARROW: /* cursor up    */
           --row;
           break;
-        case 1080: /* cursor down  */
+        case DOWN_ARROW: /* cursor down  */
           ++row;
           break;
-        case 13:   /* enter */
+        case ENTER:   /* enter */
           *(vidmem + row*160 + col*2) = (char)getakey();
           break;
         default:

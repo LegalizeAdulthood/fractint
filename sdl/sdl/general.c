@@ -333,7 +333,7 @@ int keypressed(void)
   ch = getkeyint(0);
   if (!ch) return 0;
   keybuffer = ch;
-  if (ch==F1 && helpmode)
+  if (ch==F1 && helpmode != -1)
     {
       keybuffer = 0;
       inside_help = 1;
@@ -346,7 +346,7 @@ int keypressed(void)
       inside_help = 0;
       return 0;
     }
-  else if (ch==TAB && tabmode)
+  else if ((ch==TAB || ch==CTL_TAB) && tabmode != 0)
     {
       keybuffer = 0;
       if (show_orbit)
@@ -395,11 +395,11 @@ int getakeynohelp(void)
 int getakey(void)
 {
   int ch;
-/*
+
   ch = soundflag & 7;
-  if (ch != 0 || ch != 7)
+  if (ch != 1)
       mute();
-*/
+
   do
     {
       ch = getkeyint(0);
@@ -420,6 +420,7 @@ int getkeyint(int block)
   int ch;
   int curkey;
 
+#if 0
   if (keybuffer)
     {
       ch = keybuffer;
@@ -452,7 +453,49 @@ int getkeyint(int block)
     {
       recordshw(curkey);
     }
+#else
+getkeyn0:
+  if (keybuffer)      /* got a key buffered? */
+    {
+      ch = keybuffer;
+      keybuffer = 0;  /* clear buffer */
+      return ch;      /* exit with the key */
+    }
 
+  curkey = get_key_event(block);  /* block is handled in get_key_event() */
+
+  if (curkey == 0)
+    {
+       if (slides == 1)              /* slideshow playback active? */
+        curkey = slideshw();    /* check next playback keystroke */
+      else
+        return 0;                     /* return no key */
+    }
+
+  if (curkey != 9999)          /* savetime from mouseread? */
+    {
+      switch (slides)
+      {
+        case 0:
+        default:
+          break;              /* slideshow playback not active, return the keystroke */
+        case 1:
+	        if (curkey == ESC)
+	          stopslideshow();  /* terminate playback */
+          break;
+        case 2:
+          recordshw(curkey);  /* record the key */
+          break;
+      }
+    }
+
+  if (debugflag == 3000 && (char)curkey == '~')  /* color play enabled and requested? */
+    edit_text_colors();
+  else
+    return curkey;
+
+  goto getkeyn0;
+#endif
   return curkey;
 }
 
@@ -473,7 +516,11 @@ int getkeyint(int block)
  */
 int kbhit(void)
 {
-  return 0;
+  keybuffer = get_key_event(0);
+  if (keybuffer)
+    return 1;
+  else
+    return 0;
 }
 
 /* microsecond timer routine */

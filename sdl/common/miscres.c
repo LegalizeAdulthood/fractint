@@ -1226,7 +1226,7 @@ top:
   /*waitforkey:*/
   putstringcenter(/*s_row*/24,0,80,C_GENERAL_LO,spressanykey);
   movecursor(25,80);
-#if 1
+#if 1 /* #ifdef XFRACT */
   while (keypressed())
     {
       getakey();

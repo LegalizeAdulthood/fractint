@@ -483,7 +483,7 @@ resumeloop:                             /* return here on failed overlays */
                   if (autobrowse && !no_sub_images) kbdchar = 'l';
                   else
                     {
-#if 0
+#if 1 /* #ifndef XFRACT */
                       while (!keypressed());/* { }*/  /* enables help */
 #else
                       waitkeypressed(0);
