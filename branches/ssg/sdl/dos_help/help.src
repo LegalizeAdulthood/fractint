@@ -280,7 +280,7 @@ Version 20.5.00 is an update of Fractint 20.0 based on the developer's
 
 Version 20.5 is a Port to SDL 2.0
 
-Fixed the issue with dissappearing key strokes.\
+Fixed the issue with disappearing key strokes.\
 
 Known issues:\
 Advanced Sound Controls have not been implemented.\
