@@ -883,7 +883,7 @@ void Cursor_CheckBlink(void)
 int Cursor_WaitKey(void)   /* blink cursor while waiting for a key */
 {
 
-#if 0 /* #ifndef XFRACT */
+#if 1 /* #ifndef XFRACT */
   while ( !keypressed() )
     {
       Cursor_CheckBlink();

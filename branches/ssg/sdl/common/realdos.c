@@ -733,8 +733,7 @@ int fullscreen_choice(
         }
       else
         movecursor(25,80);
-// FIXME (jonathan#1#): Will need to fix next
-#if 0 /* ifndef XFRACT */
+#if 1 /* #ifndef XFRACT */
       while (!keypressed()) { } /* enables help */
 #else
       waitkeypressed(0); /* enables help */

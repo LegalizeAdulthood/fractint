@@ -669,6 +669,7 @@ extern void froth_cleanup(void);
 
 extern void make_batch_file(void);
 extern void shell_to_dos(void);
+extern int edit_text_colors(void);
 extern int select_video_mode(int );
 extern void format_vid_table(int choice,char *buf);
 extern void make_mig(unsigned int, unsigned int);

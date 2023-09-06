@@ -84,7 +84,11 @@ loop_intro:
     if (j == 32)   /* spacebar pauses */
     {
 wait_again:
+#if 1 /* #ifndef XFRACT */
+        while (!keypressed()) ;
+#else
         waitkeypressed(0);
+#endif
         if ((j = keypressed())) /* set j to returned key */
             getakey();
         if (menu_checkkey(j,0) || j == 109) /* menu key or 'm' */

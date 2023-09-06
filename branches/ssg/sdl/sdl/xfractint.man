@@ -35,16 +35,16 @@ Passes=2 has problems??
 Symmetry that is offset slightly doesn't always complete the image.
 
 .SH "COPYRIGHT"
-Copyright 1991 \- 2022 by The Stone Soup Group
+Copyright 1991 \- 2023 by The Stone Soup Group
 .SH "AUTHORS"
 .nf
 The original Unix port was done by Ken Shirriff (shirriff@eng.sun.com).
-Xfractint was updated to Fractint 19.5 by Tim Wegner (twegner@fractint.org)
+Xfractint was updated to Fractint 19.5 by Tim Wegner (twegner@fractint.net)
 under Linux 2.0. Please report updates for other platforms to Tim Wegner.
 The current official release is 20.0.
 The primary authors of Fractint 20.0 are:
-Timothy Wegner         twegner@fractint.org
-Jonathan Osuch         josuch@fractint.org
+Timothy Wegner         twegner@fractint.net
+Jonathan Osuch         osuchj@fractint.net
 George Martin          ggmartin@compuserve.com
 Robin Bussell          robin.b2@ukonline.co.uk
 .fi

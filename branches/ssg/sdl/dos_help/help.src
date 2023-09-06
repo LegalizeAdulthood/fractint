@@ -276,22 +276,13 @@ bug fixes, and thus be more stable, but they may also have new features
 which very likely have new bugs.
 
 Version 20.5.00 is an update of Fractint 20.0 based on the developer's
-  version 20.4.14.  New features include:
+  version 20.4.17.  New features include:
 
 Version 20.5 is a Port to SDL 2.0
 
-Limited the window size (not the image size) to 800x600 (sf6), 1024x768 (sf7),\
-  or 1280x1024 (sf9).  The default is 1024x768 (sf7).  The startup parameter\
-  used to change this setting is, for example: winsize=sf9\
-  This is hard coded and means the window can't be made full screen. Also, the\
-  window can be minimized, but not resized once created.\
-Reworked the stackscreen(), unstackscreen(), and discardscreen() functions.\
-Fixed 2-color disk video modes.\
-Fixed intro screen so it appears when no video is specified in sstools.ini.\
-Fixed crashes that occurred when saving an image after zooming with the mouse.
+Fixed the issue with dissappearing key strokes.\
 
 Known issues:\
-Key strokes still disappear occasionally.\
 Advanced Sound Controls have not been implemented.\
 The Alt-function keys get grabbed by the system.  Selecting the Alt-Fn keys
   won't work, but using video=AFn in your sstools.ini file or from the
