@@ -2135,7 +2135,7 @@ void delay(int delaytime)
  */
 long clock_ticks(void)
 {
-  return(SDL_GetTicks());
+  return(SDL_GetTicks64());
 }
 
 
@@ -2144,7 +2144,7 @@ long clock_ticks(void)
 #define BLINK_INTERVAL   200
 #define BF_MATH_INTERVAL 500
 
-static U32 next_time = 0;
+static U64 next_time = 0;
 
 int time_to_update(void)
 {
@@ -2153,18 +2153,18 @@ int time_to_update(void)
   /* return a 1 every 200 milliseconds if on text screen and blink cursor */
   /* return a 1 every 500 milliseconds if calculating && bf_math */
 
-  U32 now;
+  U64 now;
 
   if (calc_status == 1 && show_orbit && soundflag&6 && !taborhelp)
     return (0); /* we will update the image at each pixel */
 
-  now = SDL_GetTicks();
+  now = SDL_GetTicks64();
   if ((calc_status == 1 && !bf_math) || using_jiim || fractype == ANT)
     /* calculating or using_jiim or fractype == ANT */
     {
       if (next_time <= now)
         {
-          next_time = SDL_GetTicks() + TICK_INTERVAL;
+          next_time = SDL_GetTicks64() + TICK_INTERVAL;
           return (1);
         }
       else
@@ -2174,7 +2174,7 @@ int time_to_update(void)
     {
       if (next_time <= now)
         {
-          next_time = SDL_GetTicks() + BF_MATH_INTERVAL;
+          next_time = SDL_GetTicks64() + BF_MATH_INTERVAL;
           return (1);
         }
       else
@@ -2184,7 +2184,7 @@ int time_to_update(void)
     {
       if (next_time <= now)
         {
-          next_time = SDL_GetTicks() + TICK_INTERVAL2;
+          next_time = SDL_GetTicks64() + TICK_INTERVAL2;
           return (1);
         }
       else
@@ -2195,7 +2195,7 @@ int time_to_update(void)
       if (next_time <= now)
         {
           blink_cursor();
-          next_time = SDL_GetTicks() + BLINK_INTERVAL;
+          next_time = SDL_GetTicks64() + BLINK_INTERVAL;
           return (1);
         }
       else
