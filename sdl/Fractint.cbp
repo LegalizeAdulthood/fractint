@@ -93,8 +93,8 @@ Fix stackscreen/unstackscreen? - look at 3d images.]]>
 			<Add option="-fno-builtin" />
 			<Add option="-D__USE_MINGW_ANSI_STDIO" />
 			<Add option="-DNASM" />
-			<Add directory="C:/SDL/SDL2-2.0.14/i686-w64-mingw32/include/SDL2" />
-			<Add directory="C:/SDL/SDL2_ttf-2.0.14/i686-w64-mingw32/include/SDL2" />
+			<Add directory="C:/SDL/SDL2-2.28.3/i686-w64-mingw32/include/SDL2" />
+			<Add directory="C:/SDL/SDL2_ttf-2.20.2/i686-w64-mingw32/include/SDL2" />
 			<Add directory="headers" />
 		</Compiler>
 		<Linker>
@@ -102,8 +102,8 @@ Fix stackscreen/unstackscreen? - look at 3d images.]]>
 			<Add library="SDL2main" />
 			<Add library="SDL2" />
 			<Add library="SDL2_ttf" />
-			<Add directory="C:/SDL/SDL2-2.0.14/i686-w64-mingw32/lib" />
-			<Add directory="C:/SDL/SDL2_ttf-2.0.14/i686-w64-mingw32/lib" />
+			<Add directory="C:/SDL/SDL2-2.28.3/i686-w64-mingw32/lib" />
+			<Add directory="C:/SDL/SDL2_ttf-2.20.2/i686-w64-mingw32/lib" />
 		</Linker>
 		<Unit filename="common/3d.c">
 			<Option compilerVar="CC" />
