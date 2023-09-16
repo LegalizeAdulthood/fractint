@@ -1592,7 +1592,7 @@ int load_fractint_cfg(int options)
   long xdots, ydots;
   int i, j, keynum, dotmode, colors;
   int commas[6];
-  char tempstring[150];
+  char tempstring[FILE_MAX_PATH];
 
   if (extraseg2 == NULL)
     extraseg2 = (BYTE*)malloc(30000);
