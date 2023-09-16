@@ -467,7 +467,7 @@ int cmdfiles(int argc,char **argv)
 {
   int     i;
   char    curarg[141];
-  char    tempstring[101];
+  char    tempstring[FILE_MAX_PATH];
   char    *sptr;
   FILE    *initfile;
 

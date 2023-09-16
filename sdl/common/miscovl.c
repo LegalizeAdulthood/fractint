@@ -1849,7 +1849,7 @@ static int entcompare(VOIDCONSTPTR p1,VOIDCONSTPTR p2)
 void update_fractint_cfg(void)
 {
 #if 1
-  char cfgname[100],outname[100],buf[121],kname[5];
+  char cfgname[FILE_MAX_PATH],outname[100],buf[121],kname[5];
   FILE *cfgfile,*outfile;
   int *cfglinenums;
   int i,j,linenum,nextlinenum,nextmode;

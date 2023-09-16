@@ -33,17 +33,17 @@ int ValidateLuts( char * fn )
 {
 FILE * f;
 unsigned int    r, g, b, index;
-char    line[160];
+char    line[FILE_MAX_PATH];
 char    temp[FILE_MAX_PATH+1];
 char    temp_fn[FILE_MAX_PATH];
 char   *dummy; /* to quiet compiler */
 
         strcpy(temp,MAP_name);
         strcpy(temp_fn,fn);
-if (colorstate >= 2)
-        merge_pathnames(temp,temp_fn,2);
-else
-        merge_pathnames(temp,temp_fn,0);
+        if (colorstate >= 2)
+          merge_pathnames(temp,temp_fn,2);
+        else
+          merge_pathnames(temp,temp_fn,0);
 
         if (has_ext(temp) == NULL) /* Did name have an extension? */
                 strcat(temp,".map");  /* No? Then add .map */

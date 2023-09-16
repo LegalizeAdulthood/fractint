@@ -130,6 +130,14 @@ void findpath(char *filename, char *fullpathname)
   fractdir = getenv("FRACTDIR");
   if (fractdir != NULL)
     {
+      if (strlen(fractdir) > FILE_MAX_DIR)
+        {
+          char msg[120];
+          sprintf(msg, "Warning: Length of Directory set by FRACTDIR exceeds %d characters.", FILE_MAX_DIR);
+          popup_error(3, msg);
+          fullpathname[0] = 0; /* indicate failure */
+          return;
+        }
       strcpy(fullpathname,fractdir);
       strcat(fullpathname,SLASH);
       strcat(fullpathname,filename);

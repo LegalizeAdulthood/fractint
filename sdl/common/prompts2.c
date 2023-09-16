@@ -1528,7 +1528,7 @@ retry_dir:
         }
       else /* speedstate == SEARCHPATH */
         {
-          char fullpath[FILE_MAX_DIR];
+          char fullpath[FILE_MAX_PATH];
           findpath(speedstr,fullpath);
           if (fullpath[0])
             strcpy(flname,fullpath);
