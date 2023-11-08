@@ -70,10 +70,14 @@ Fix file access.]]>
 				<Option projectCompilerOptionsRelation="1" />
 				<Compiler>
 					<Add option="-std=c99" />
+					<Add option="-m64" />
 					<Add option="-fno-builtin" />
 					<Add option="`sdl2-config --cflags --libs`" />
 					<Add option="-DXFRACT" />
 				</Compiler>
+				<Linker>
+					<Add option="-m64" />
+				</Linker>
 			</Target>
 			<Target title="C only Debug">
 				<Option platforms="Unix;" />
@@ -87,12 +91,16 @@ Fix file access.]]>
 					<Add option="-Wextra" />
 					<Add option="-Wall" />
 					<Add option="-std=c99" />
+					<Add option="-m64" />
 					<Add option="-g" />
 					<Add option="-fno-builtin" />
 					<Add option="`sdl2-config --cflags --libs`" />
 					<Add option="-DXFRACT" />
 					<Add option="-DDEBUG" />
 				</Compiler>
+				<Linker>
+					<Add option="-m64" />
+				</Linker>
 			</Target>
 		</Build>
 		<Compiler>

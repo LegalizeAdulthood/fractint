@@ -19,7 +19,7 @@ DEFAULT REL
 CEXTERN overflow   ;:DWORD  4 - int
 
 section .bss
-alignb  16
+align  16
 
 sign:                      ; sign flag goes here
         resb   INTSZ

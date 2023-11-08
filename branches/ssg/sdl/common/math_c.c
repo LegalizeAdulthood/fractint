@@ -403,7 +403,6 @@ long lsqrt(long f)
         y0 = multiply(c,y0, bitshift);
     }
     N /= 2;
-/* NOTE (jonathan#1#): Aren't both return's the same???? */
     if (N >= 0)
         return y0 <<  N;                        /* correct for shift above */
     else
