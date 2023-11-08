@@ -181,6 +181,7 @@ int    maxhits = 1;
 int    OKtoMIIM;
 int    SecretExperimentalMode;
 float  luckyx = 0, luckyy = 0;
+static int rowlen = 8;
 
 static void fillrect(int x, int y, int width, int depth, int color)
 {
@@ -236,9 +237,14 @@ ClearQueue()
 
 int Init_Queue(unsigned long request)
 {
-  /* following will need to be changed JCO 02/09/2010 */
+
+  if (sizeof(long) > sizeof(float))
+    rowlen = 2 * sizeof(long);
+  else
+    rowlen = 2 * sizeof(float);
+
   for (ListSize = request; ListSize > 1024; ListSize /= 2)
-    switch (common_startdisk(ListSize * 8, 1, 256))
+    switch (common_startdisk(ListSize * rowlen, 1, 256))
       {
       case 0:                        /* success */
         ListFront = ListBack = 0;
@@ -268,8 +274,8 @@ PushLong(long x, long y)
 {
   if (((ListFront + 1) % ListSize) != ListBack)
     {
-      if (ToMemDisk(8*ListFront, sizeof(x), &x) &&
-          ToMemDisk(8*ListFront +sizeof(x), sizeof(y), &y))
+      if (ToMemDisk(rowlen*ListFront, sizeof(x), &x) &&
+          ToMemDisk(rowlen*ListFront +sizeof(x), sizeof(y), &y))
         {
           ListFront = (ListFront + 1) % ListSize;
           if (++lsize > lmax)
@@ -289,8 +295,8 @@ PushFloat(float x, float y)
 {
   if (((ListFront + 1) % ListSize) != ListBack)
     {
-      if (ToMemDisk(8*ListFront, sizeof(x), &x) &&
-          ToMemDisk(8*ListFront +sizeof(x), sizeof(y), &y))
+      if (ToMemDisk(rowlen*ListFront, sizeof(x), &x) &&
+          ToMemDisk(rowlen*ListFront +sizeof(x), sizeof(y), &y))
         {
           ListFront = (ListFront + 1) % ListSize;
           if (++lsize > lmax)
@@ -316,8 +322,8 @@ PopFloat()
       ListFront--;
       if (ListFront < 0)
         ListFront = ListSize - 1;
-      if (FromMemDisk(8*ListFront, sizeof(popx), &popx) &&
-          FromMemDisk(8*ListFront +sizeof(popx), sizeof(popy), &popy))
+      if (FromMemDisk(rowlen*ListFront, sizeof(popx), &popx) &&
+          FromMemDisk(rowlen*ListFront +sizeof(popx), sizeof(popy), &popy))
         {
           pop.x = popx;
           pop.y = popy;
@@ -340,8 +346,8 @@ PopLong()
       ListFront--;
       if (ListFront < 0)
         ListFront = ListSize - 1;
-      if (FromMemDisk(8*ListFront, sizeof(pop.x), &pop.x) &&
-          FromMemDisk(8*ListFront +sizeof(pop.x), sizeof(pop.y), &pop.y))
+      if (FromMemDisk(rowlen*ListFront, sizeof(pop.x), &pop.x) &&
+          FromMemDisk(rowlen*ListFront +sizeof(pop.x), sizeof(pop.y), &pop.y))
         --lsize;
       return pop;
     }
@@ -370,8 +376,8 @@ DeQueueFloat()
 
   if (ListBack != ListFront)
     {
-      if (FromMemDisk(8*ListBack, sizeof(outx), &outx) &&
-          FromMemDisk(8*ListBack +sizeof(outx), sizeof(outy), &outy))
+      if (FromMemDisk(rowlen*ListBack, sizeof(outx), &outx) &&
+          FromMemDisk(rowlen*ListBack +sizeof(outx), sizeof(outy), &outy))
         {
           ListBack = (ListBack + 1) % ListSize;
           out.x = outx;
@@ -394,8 +400,8 @@ DeQueueLong()
 
   if (ListBack != ListFront)
     {
-      if (FromMemDisk(8*ListBack, sizeof(out.x), &out.x) &&
-          FromMemDisk(8*ListBack +sizeof(out.x), sizeof(out.y), &out.y))
+      if (FromMemDisk(rowlen*ListBack, sizeof(out.x), &out.x) &&
+          FromMemDisk(rowlen*ListBack +sizeof(out.x), sizeof(out.y), &out.y))
         {
           ListBack = (ListBack + 1) % ListSize;
           lsize--;
