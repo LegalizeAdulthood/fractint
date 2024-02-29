@@ -588,7 +588,7 @@ int calcfract(void)
     }
 
   LogTable = NULL;
-  MaxLTSize = maxit;
+  MaxLTSize = (int)maxit;
   Log_Calc = 0;
   /* below, INT_MAX=32767 only when an integer is two bytes.  Which is not true for Xfractint. */
   /* Since 32767 is what was meant, replaced the instances of INT_MAX with 32767. */
@@ -611,7 +611,7 @@ int calcfract(void)
 
   if ((LogFlag || rangeslen) && !Log_Calc)
     {
-      LogTable = (BYTE *)malloc((long)MaxLTSize + 1);
+      LogTable = (BYTE *)malloc((int)MaxLTSize + 1);
 
       if (LogTable == NULL)
         {
@@ -2891,11 +2891,11 @@ static int potential(LDBL mag, long iterations)
   float f_mag,f_tmp,pot;
   LDBL d_tmp;
   int i_pot;
-  long l_pot;
+  int l_pot;
 
   if (iterations < maxit)
     {
-      pot = (float)(l_pot = iterations+2);
+      pot = (float)(l_pot = (int)iterations+2);
       if (l_pot <= 0 || mag <= 1.0)
         pot = (float)0.0;
       else /* pot = log(mag) / pow(2.0, (double)pot); */
@@ -2942,7 +2942,7 @@ static int potential(LDBL mag, long iterations)
   else /* inside < 0 implies inside=maxit, so use 1st pot param instead */
     pot = (float)potparam[0];
 
-  i_pot = (int)((l_pot = (long)(pot * 256)) >> 8);
+  i_pot = (int)((l_pot = (int)(pot * 256)) >> 8);
   if (i_pot >= colors)
     {
       i_pot = colors - 1;

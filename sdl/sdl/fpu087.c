@@ -189,21 +189,21 @@ long x;
 }
 
 #define em2float(l) (*(float *)&(l))
-#define float2em(f) (*(long *)&(f))
+#define float2em(f) (*(int *)&(f))
 
 /*
  * Input is a 16 bit offset number.  Output is shifted by Fudge.
  */
-unsigned long ExpFudged(x, Fudge)
-long x;
+unsigned int ExpFudged(x, Fudge)
+int x;
 int Fudge;
 {
-    return (long) (exp((double)x/(double)(1<<16))*(double)(1<<Fudge));
+    return (int) (exp((double)x/(double)(1<<16))*(double)(1<<Fudge));
 }
 
 /* This multiplies two e/m numbers and returns an e/m number. */
-long r16Mul(x,y)
-long x,y;
+int r16Mul(x,y)
+int x,y;
 {
     float f;
     f = em2float(x)*em2float(y);
@@ -211,15 +211,15 @@ long x,y;
 }
 
 /* This takes an exp/mant number and returns a shift-16 number */
-long LogFloat14(x)
-unsigned long x;
+int LogFloat14(x)
+unsigned int x;
 {
     return log((double)em2float(x))*(1<<16);
 }
 
 /* This divides two e/m numbers and returns an e/m number. */
-long RegDivFloat(x,y)
-long x,y;
+int RegDivFloat(x,y)
+int x,y;
 {
     float f;
     f = em2float(x)/em2float(y);
@@ -231,13 +231,14 @@ long x,y;
  * the 4 byte number: exp,mant,mant,mant
  * Instead of using exp/mant format, we'll just use floats.
  * Note: If sizeof(float) != sizeof(long), we're hosed.
- */
-long RegFg2Float(x,FudgeFact)
-long x;
+ *     Changed long to int because the above is the case for 64-bit Linux.
+*/
+int RegFg2Float(x,FudgeFact)
+int x;
 int FudgeFact;
 {
     float f;
-    long l;
+    int l;
     f = x/(float)(1<<FudgeFact);
     l = float2em(f);
     return l;
@@ -246,15 +247,15 @@ int FudgeFact;
 /*
  * This converts em to shifted integer format.
  */
-long RegFloat2Fg(x,Fudge)
-long x;
+int RegFloat2Fg(x,Fudge)
+int x;
 int Fudge;
 {
     return em2float(x)*(float)(1<<Fudge);
 }
 
-long RegSftFloat(x, Shift)
-long x;
+int RegSftFloat(x, Shift)
+int x;
 int Shift;
 {
     float f;

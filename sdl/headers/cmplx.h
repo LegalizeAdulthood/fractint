@@ -52,19 +52,19 @@ typedef struct  LHyperComplex    _LHCMPLX;
 enum MATH_TYPE { D_MATH, L_MATH };
 extern enum MATH_TYPE MathType;
 
-#define fDiv(x, y, z) (void)((*(long*)&z) = RegDivFloat(*(long*)&x, *(long*)&y))
-#define fMul16(x, y, z) (void)((*(long*)&z) = r16Mul(*(long*)&x, *(long*)&y))
-#define fShift(x, Shift, z) (void)((*(long*)&z) = \
-   RegSftFloat(*(long*)&x, Shift))
-#define Fg2Float(x, f, z) (void)((*(long*)&z) = RegFg2Float(x, f))
-#define Float2Fg(x, f) RegFloat2Fg(*(long*)&x, f)
-#define fLog14(x, z) (void)((*(long*)&z) = \
-        RegFg2Float(LogFloat14(*(long*)&x), 16))
-#define fExp14(x, z) (void)((*(long*)&z) = ExpFloat14(*(long*)&x));
+#define fDiv(x, y, z) (void)((*(int*)&z) = RegDivFloat(*(int*)&x, *(int*)&y))
+#define fMul16(x, y, z) (void)((*(int*)&z) = r16Mul(*(int*)&x, *(int*)&y))
+#define fShift(x, Shift, z) (void)((*(int*)&z) = \
+   RegSftFloat(*(int*)&x, Shift))
+#define Fg2Float(x, f, z) (void)((*(int*)&z) = RegFg2Float(x, f))
+#define Float2Fg(x, f) RegFloat2Fg(*(int*)&x, f)
+#define fLog14(x, z) (void)((*(int*)&z) = \
+        RegFg2Float(LogFloat14(*(int*)&x), 16))
+#define fExp14(x, z) (void)((*(int*)&z) = ExpFloat14(*(int*)&x));
 #define fSqrt14(x, z) fLog14(x, z); fShift(z, -1, z); fExp14(z, z)
 
 /* the following are declared 4 dimensional as an experiment */
-/* changeing declarations to _CMPLX and _LCMPLX restores the code */
+/* changing declarations to _CMPLX and _LCMPLX restores the code */
 /* to 2D */
 union Arg {
    _CMPLX     d;

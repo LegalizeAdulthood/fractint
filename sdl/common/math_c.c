@@ -466,10 +466,10 @@ _CMPLX ComplexSqrtFloat(LDBL x, LDBL y)
 /***** FRACTINT specific routines and variables *****/
 
 BYTE *LogTable = (BYTE *)0;
-long MaxLTSize;
+int MaxLTSize;
 int  Log_Calc = 0;
 static double mlf;
-static unsigned long lf;
+static unsigned int lf;
 
 /* int LogFlag;
    LogFlag == 1  -- standard log palettes
@@ -481,7 +481,7 @@ static unsigned long lf;
 void SetupLogTable(void)
 {
     float l, f, c, m;
-    unsigned long prev, limit, sptop;
+    unsigned int prev, limit, sptop;
     unsigned n;
 
     if (save_release > 1920 || Log_Fly_Calc == 1)   /* set up on-the-fly variables */
@@ -489,7 +489,7 @@ void SetupLogTable(void)
         if (LogFlag > 0)   /* new log function */
         {
             lf = (LogFlag > 1) ? LogFlag : 0;
-            if (lf >= (unsigned long)MaxLTSize)
+            if (lf >= (unsigned int)MaxLTSize)
                 lf = MaxLTSize - 1;
             mlf = (colors - (lf?2:1)) / log(MaxLTSize - lf);
         }
@@ -499,7 +499,7 @@ void SetupLogTable(void)
         }
         else if (LogFlag <= -2)   /* sqrt function */
         {
-            if ((lf = 0 - LogFlag) >= (unsigned long)MaxLTSize)
+            if ((lf = 0 - LogFlag) >= (unsigned int)MaxLTSize)
                 lf = MaxLTSize - 1;
             mlf = (colors - 2) / sqrt(MaxLTSize - lf);
         }
@@ -511,8 +511,8 @@ void SetupLogTable(void)
     if (save_release > 1920 && !Log_Calc)
     {
         Log_Calc = 1;   /* turn it on */
-        for (prev = 0; prev <= (unsigned long)MaxLTSize; prev++)
-            LogTable[prev] = (BYTE)logtablecalc((long)prev);
+        for (prev = 0; prev <= (unsigned int)MaxLTSize; prev++)
+            LogTable[prev] = (BYTE)logtablecalc((int)prev);
         Log_Calc = 0;   /* turn it off, again */
         return;
     }
@@ -520,21 +520,21 @@ void SetupLogTable(void)
     if (LogFlag > -2)
     {
         lf = (LogFlag > 1) ? LogFlag : 0;
-        if (lf >= (unsigned long)MaxLTSize)
+        if (lf >= (unsigned int)MaxLTSize)
             lf = MaxLTSize - 1;
-        Fg2Float((long)(MaxLTSize-lf), 0, m);
+        Fg2Float((int)(MaxLTSize-lf), 0, m);
         fLog14(m, m);
-        Fg2Float((long)(colors-(lf?2:1)), 0, c);
+        Fg2Float((int)(colors-(lf?2:1)), 0, c);
         fDiv(m, c, m);
         for (prev = 1; prev <= lf; prev++)
             LogTable[prev] = 1;
         for (n = (lf?2:1); n < (unsigned int)colors; n++)
         {
-            Fg2Float((long)n, 0, f);
+            Fg2Float((int)n, 0, f);
             fMul16(f, m, f);
             fExp14(f, l);
-            limit = (unsigned long)Float2Fg(l, 0) + lf;
-            if (limit > (unsigned long)MaxLTSize || n == (unsigned int)(colors-1))
+            limit = (unsigned int)Float2Fg(l, 0) + lf;
+            if (limit > (unsigned int)MaxLTSize || n == (unsigned int)(colors-1))
                 limit = MaxLTSize;
             while (prev <= limit)
                 LogTable[prev++] = (BYTE)n;
@@ -542,21 +542,21 @@ void SetupLogTable(void)
     }
     else
     {
-        if ((lf = 0 - LogFlag) >= (unsigned long)MaxLTSize)
+        if ((lf = 0 - LogFlag) >= (unsigned int)MaxLTSize)
             lf = MaxLTSize - 1;
-        Fg2Float((long)(MaxLTSize-lf), 0, m);
+        Fg2Float((int)(MaxLTSize-lf), 0, m);
         fSqrt14(m, m);
-        Fg2Float((long)(colors-2), 0, c);
+        Fg2Float((int)(colors-2), 0, c);
         fDiv(m, c, m);
         for (prev = 1; prev <= lf; prev++)
             LogTable[prev] = 1;
         for (n = 2; n < (unsigned int)colors; n++)
         {
-            Fg2Float((long)n, 0, f);
+            Fg2Float((int)n, 0, f);
             fMul16(f, m, f);
             fMul16(f, f, l);
-            limit = (unsigned long)(Float2Fg(l, 0) + lf);
-            if (limit > (unsigned long)MaxLTSize || n == (unsigned int)(colors-1))
+            limit = (unsigned int)(Float2Fg(l, 0) + lf);
+            if (limit > (unsigned int)MaxLTSize || n == (unsigned int)(colors-1))
                 limit = MaxLTSize;
             while (prev <= limit)
                 LogTable[prev++] = (BYTE)n;
@@ -564,7 +564,7 @@ void SetupLogTable(void)
     }
     LogTable[0] = 0;
     if (LogFlag != -1)
-        for (sptop = 1; sptop < (unsigned long)MaxLTSize; sptop++) /* spread top to incl unused colors */
+        for (sptop = 1; sptop < (unsigned int)MaxLTSize; sptop++) /* spread top to incl unused colors */
             if (LogTable[sptop] > LogTable[sptop-1])
                 LogTable[sptop] = (BYTE)(LogTable[sptop-1]+1);
 }
@@ -611,13 +611,13 @@ long logtablecalc(long citer)
     return (ret);
 }
 
-long ExpFloat14(long xx)
+int ExpFloat14(int xx)
 {
     static float fLogTwo = (float)0.6931472;
     int f;
-    long Ans;
+    int Ans;
 
-    f = 23 - (int)RegFloat2Fg(RegDivFloat(xx, *(long*)&fLogTwo), 0);
+    f = 23 - (int)RegFloat2Fg(RegDivFloat(xx, *(int*)&fLogTwo), 0);
     Ans = ExpFudged(RegFloat2Fg(xx, 16), f);
     return(RegFg2Float(Ans, (char)f));
 }

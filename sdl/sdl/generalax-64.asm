@@ -47,20 +47,22 @@ align 16
         imul    rsi                     ; do the multiply with Y
         cmp     ecx, 32                 ; ugly klooge:  check for 32-bit shift
         jb      short fastm1            ;  < 32 bits:  no problem
-        sar     rax, 32                 ;  >= 32 bits:  manual shift
-        sub     ecx, 32                 ;  ...
-fastm1: sar    rax, cl                  ; shift down 'n' bits
-        js      fastm3
-        mov     rdx, rax
-        sar     rdx, 32                 ; remove eax bits first
+fastm0:
+        shrd    rax, rdx, 16     ; max shift is 31, so use 16 twice
+        sar       rdx, 16            ; shrd doesn't shift rdx, so shift rdx preserving the sign
+        shrd    rax, rdx, 16
+        sar       rdx, 16
+        sub     ecx, 32             ;  >= 32 bits:  done with manual shift
+        cmp     ecx, 32            ; check again for 32-bit shift
+        jae       short fastm0
+fastm1: shrd    rax, rdx, cl       ; shift down 'n' bits
+        js        fastm3      ; is sign flag set?
         sar     rdx, cl
-        jne     overmf
+        jne     overmf      ; something left in rdx, we overflowed
         ret
-fastm3: mov     rdx, rax
-        sar     rdx, 32                 ; remove eax bits first
-        sar     rdx, cl
-        inc     edx
-        jne     overmf
+fastm3: sar     rdx, cl
+        inc    rdx
+        jne    overmf
         ret
 overmf:
         mov     rax,07fffffffh          ; overflow value
