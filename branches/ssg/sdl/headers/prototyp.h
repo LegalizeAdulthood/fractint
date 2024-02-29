@@ -635,7 +635,7 @@ extern int  complex_div(_CMPLX, _CMPLX, _CMPLX *);
 extern int  complex_mult(_CMPLX, _CMPLX, _CMPLX *);
 extern void SetupLogTable(void);
 extern long logtablecalc(long);
-extern long ExpFloat14(long);
+extern int ExpFloat14(int);
 extern void Arcsinz(_CMPLX, _CMPLX *);
 extern void Arccosz(_CMPLX, _CMPLX *);
 extern void Arcsinhz(_CMPLX, _CMPLX *);
@@ -997,19 +997,19 @@ extern void FPUsinhcosh(double *, double *, double *);
 extern void FPUcplxlog(_CMPLX *, _CMPLX *);
 extern void SinCos086(long , long *, long *);
 extern void SinhCosh086(long , long *, long *);
-extern long r16Mul(long , long );
-extern long RegFloat2Fg(long , int );
+extern int r16Mul(int , int );
+extern int RegFloat2Fg(int , int );
 extern long Exp086(long);
-extern unsigned long ExpFudged(long , int );
-extern long RegDivFloat(long , long );
-extern long LogFudged(unsigned long , int );
-extern long LogFloat14(unsigned long );
+extern unsigned int ExpFudged(int , int );
+extern int RegDivFloat(int , int );
+extern int LogFudged(unsigned int , int );
+extern int LogFloat14(unsigned int );
 #if 0
 extern long RegFg2Float(long, char);
 extern long RegSftFloat(long, char);
 #else
-extern long RegFg2Float(long , int );
-extern long RegSftFloat(long , int );
+extern int RegFg2Float(int , int );
+extern int RegSftFloat(int , int );
 #endif
 
 /*  general -- C file prototypes */

@@ -281,6 +281,9 @@ Version 20.5.00 is an update of Fractint 20.0 based on the developer's
 Version 20.5 is a Port to SDL 2.0
 
 Fixed the issue with disappearing key strokes.\
+Fixed integer version of inverse julia in a 64-bit system.\
+Addressed code that assumed the long integer type was 4 bytes when
+  converting to/from the float type.\
 
 Known issues:\
 Advanced Sound Controls have not been implemented.\

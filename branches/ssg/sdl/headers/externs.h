@@ -298,7 +298,7 @@ extern S32                   maxct;
 extern char                  maxfn;
 extern long                  maxit;
 extern int                   maxlinelength;
-extern long                  MaxLTSize;
+extern int                  MaxLTSize;
 extern unsigned              Max_Args;
 extern unsigned              Max_Ops;
 extern long                  maxptr;
